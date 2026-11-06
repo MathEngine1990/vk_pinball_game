@@ -1,1 +1,344 @@
-<!doctype html><html lang="ru"><meta charset="utf-8"><title>Арена: Рикошет</title><script>const u=new URL("index.html",location.href);u.search=location.search;u.searchParams.set("view","web");u.hash=location.hash;location.replace(u.href);</script></html>
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Арена: Рикошет</title><style>:root{color-scheme:dark;font:16px system-ui,sans-serif;color:#f6edd9;background:#111815}*{box-sizing:border-box}body{margin:0;min-height:100svh;background:radial-gradient(ellipse at 70% 45%,#293b31,transparent 58%),#111815}header{height:64px;border-bottom:1px solid #435048;display:flex;align-items:center;justify-content:space-between;padding:0 5vw}header b,.plate b{font:900 italic 21px Arial;letter-spacing:-1px}i,em,h1 span{color:#ff7945}header span,footer span{font-size:12px;color:#c5cec3}main{min-height:calc(100svh - 64px);display:flex;align-items:center;justify-content:center;gap:5vw;padding:16px}.panel{width:clamp(230px,25vw,360px)}small,.plate span,footer b{font:700 11px monospace;letter-spacing:1.5px;color:#f3ad77}h1{font:1000 italic clamp(42px,5.2vw,82px)/1 Arial;margin:15px 0;letter-spacing:-.07em}.panel p{line-height:1.5;color:#c6d2c8}button,input{font:inherit;border-radius:6px;padding:12px 15px}button{cursor:pointer;font-weight:750;text-align:left;background:#25362c;color:#f4eddb;border:1px solid #526354}button:disabled{opacity:.45}button:hover:enabled{filter:brightness(1.16)}#menu>button,#playing button{width:100%;margin-bottom:8px}#solo,#hit{color:#201a14;background:#ff8953;border-color:#ffa279}strong{float:right}form{display:flex;gap:5px}input{min-width:0;width:100%;background:#101914;color:#fff;border:1px solid #526354}.stats{border-top:1px solid #48594d;margin-top:20px;padding-top:16px}.stats p{margin:5px 0}.cabinet{width:min(54vw,calc(100svh - 182px),760px);border-radius:13px;border:3px solid #647468;background:#27362d;box-shadow:0 8px 0 #0a100d,0 22px 45px #0008;overflow:hidden}.plate,footer{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:#1d2821;gap:8px}.plate span{font-size:9px}canvas{width:100%;display:block;touch-action:none}footer{font-size:11px}footer b{letter-spacing:0}body.match .stats{display:none}
+html,body{height:100%;min-height:0}
+body{height:100dvh;display:grid;grid-template-rows:auto minmax(0,1fr);padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
+header{height:clamp(34px,7vh,60px)}
+main{min-height:0;min-width:0;display:grid;grid-template-columns:minmax(210px,340px) minmax(0,760px);grid-template-rows:minmax(0,1fr);align-items:center;gap:clamp(8px,3vw,54px);padding:clamp(5px,2vh,18px) clamp(6px,2vw,28px)}
+.panel{width:100%;min-height:0;max-height:100%;overflow:auto;overscroll-behavior:contain}
+.stage{height:100%;min-height:0;min-width:0;display:grid;place-items:center}
+.cabinet{width:min(100%,45vh);max-width:100%}
+canvas{aspect-ratio:1;user-select:none}
+.scheme{display:flex;gap:8px;align-items:center;justify-content:space-between;font-size:13px}
+select{min-width:0;max-width:65%;font:inherit;border:1px solid #526354;border-radius:6px;padding:8px;background:#1d3026;color:#f6edd9}
+#gesture{font-size:13px;color:#cad6c9;margin:5px 0}
+#power{font-weight:bold;color:#ffd28c}
+footer{min-height:24px;flex-wrap:wrap;gap:2px 8px}
+@media(max-width:740px) and (orientation:portrait){
+  header{padding:0 10px}header b{font-size:17px}
+  main{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr) auto;gap:5px;padding:5px 8px 8px}
+  .stage{grid-row:1}.panel{grid-row:2;width:min(100%,560px);justify-self:center;max-height:46dvh}
+  .panel>small,h1,.stats{display:none}
+  #menu,#playing:not([hidden]){display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px}
+  #menu[hidden]{display:none}form{grid-column:span 2}
+  #menu>button,#playing button{margin:0}button,input{padding:8px}#hint,#gesture{font-size:12px;line-height:1.25;margin:4px 0}
+  .scheme{margin-top:5px}
+}
+@media(max-height:540px) and (orientation:landscape){
+  header{height:30px;padding:0 12px}header b{font-size:16px}
+  main{grid-template-columns:minmax(165px,0.8fr) minmax(0,1.2fr);gap:8px;padding:4px 8px 6px}
+  .panel{max-width:340px;justify-self:end}.panel>small,h1,.stats{display:none}
+  #hint,#gesture{font-size:12px;line-height:1.25;margin:4px 0}button,input,select{padding:6px 9px}
+  #playing:not([hidden]){display:flex;gap:4px}#playing button{width:auto;flex:1}
+}
+@media(max-width:740px),(max-height:540px){
+  .plate,footer{padding:3px 6px}.plate b{font-size:14px}.plate span{letter-spacing:0;font-size:8px}footer b,#power{font-size:10px}.cabinet{box-shadow:none}
+}</style><script>/* MIT License
+
+
+Copyright (c) 2017-present, V Kontakte, LLC.
+
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+ */
+!function(){"use strict";var e=function(){return e=Object.assign||function(e){for(var t,n=1,o=arguments.length;n<o;n++)for(var r in t=arguments[n])Object.prototype.hasOwnProperty.call(t,r)&&(e[r]=t[r]);return e},e.apply(this,arguments)};function t(e,t,n,o){return new(n||(n=Promise))((function(r,p){function i(e){try{s(o.next(e))}catch(e){p(e)}}function a(e){try{s(o.throw(e))}catch(e){p(e)}}function s(e){var t;e.done?r(e.value):(t=e.value,t instanceof n?t:new n((function(e){e(t)}))).then(i,a)}s((o=o.apply(e,t||[])).next())}))}function n(e,t){var n,o,r,p,i={label:0,sent:function(){if(1&r[0])throw r[1];return r[1]},trys:[],ops:[]};return p={next:a(0),throw:a(1),return:a(2)},"function"==typeof Symbol&&(p[Symbol.iterator]=function(){return this}),p;function a(a){return function(s){return function(a){if(n)throw new TypeError("Generator is already executing.");for(;p&&(p=0,a[0]&&(i=0)),i;)try{if(n=1,o&&(r=2&a[0]?o.return:a[0]?o.throw||((r=o.return)&&r.call(o),0):o.next)&&!(r=r.call(o,a[1])).done)return r;switch(o=0,r&&(a=[2&a[0],r.value]),a[0]){case 0:case 1:r=a;break;case 4:return i.label++,{value:a[1],done:!1};case 5:i.label++,o=a[1],a=[0];continue;case 7:a=i.ops.pop(),i.trys.pop();continue;default:if(!(r=i.trys,(r=r.length>0&&r[r.length-1])||6!==a[0]&&2!==a[0])){i=0;continue}if(3===a[0]&&(!r||a[1]>r[0]&&a[1]<r[3])){i.label=a[1];break}if(6===a[0]&&i.label<r[1]){i.label=r[1],r=a;break}if(r&&i.label<r[2]){i.label=r[2],i.ops.push(a);break}r[2]&&i.ops.pop(),i.trys.pop();continue}a=t.call(e,i)}catch(e){a=[6,e],o=0}finally{n=r=0}if(5&a[0])throw a[1];return{value:a[0]?a[1]:void 0,done:!0}}([a,s])}}}function o(e,t,n){if(n||2===arguments.length)for(var o,r=0,p=t.length;r<p;r++)!o&&r in t||(o||(o=Array.prototype.slice.call(t,0,r)),o[r]=t[r]);return e.concat(o||Array.prototype.slice.call(t))}function r(t,n,o){var r=function(e){var t={current:0,next:function(){return++this.current}},n={};return{add:function(o,r){var p=null!=r?r:"".concat(t.next(),"_").concat(e);return n[p]=o,p},resolve:function(e,t,o){var r=n[e];r&&(o(t)?r.resolve(t):r.reject(t),n[e]=null)}}}(o);return n((function(e){if(e.detail&&e.detail.data&&"object"==typeof e.detail.data&&"request_id"in e.detail.data){var t=e.detail.data,n=t.request_id,o=function(e,t){var n={};for(var o in e)Object.prototype.hasOwnProperty.call(e,o)&&t.indexOf(o)<0&&(n[o]=e[o]);if(null!=e&&"function"==typeof Object.getOwnPropertySymbols){var r=0;for(o=Object.getOwnPropertySymbols(e);r<o.length;r++)t.indexOf(o[r])<0&&Object.prototype.propertyIsEnumerable.call(e,o[r])&&(n[o[r]]=e[o[r]])}return n}(t,["request_id"]);n&&r.resolve(n,o,(function(e){return!("error_type"in e)}))}})),function(n,o){return void 0===o&&(o={}),new Promise((function(p,i){var a=r.add({resolve:p,reject:i},o.request_id);t(n,e(e({},o),{request_id:a}))}))}}var p,i="undefined"!=typeof window,a=Boolean(i&&window.AndroidBridge),s=Boolean(i&&window.webkit&&window.webkit.messageHandlers&&window.webkit.messageHandlers.VKWebAppClose),u=Boolean(i&&window.ReactNativeWebView&&"function"==typeof window.ReactNativeWebView.postMessage),c=i&&!a&&!s,l=c&&/(^\?|&)vk_platform=mobile_web(&|$)/.test(location.search),d=c?"message":"VKWebAppEvent",b=o(["VKWebAppInit","VKWebAppGetCommunityAuthToken","VKWebAppAddToCommunity","VKWebAppAddToHomeScreenInfo","VKWebAppClose","VKWebAppCopyText","VKWebAppCreateHash","VKWebAppGetUserInfo","VKWebAppSetLocation","VKWebAppSendToClient","VKWebAppGetClientVersion","VKWebAppGetPhoneNumber","VKWebAppGetEmail","VKWebAppGetGroupInfo","VKWebAppGetGeodata","VKWebAppGetCommunityToken","VKWebAppGetConfig","VKWebAppGetLaunchParams","VKWebAppSetTitle","VKWebAppGetAuthToken","VKWebAppCallAPIMethod","VKWebAppJoinGroup","VKWebAppLeaveGroup","VKWebAppAllowMessagesFromGroup","VKWebAppDenyNotifications","VKWebAppAllowNotifications","VKWebAppOpenPayForm","VKWebAppOpenApp","VKWebAppShare","VKWebAppShowWallPostBox","VKWebAppScroll","VKWebAppShowOrderBox","VKWebAppShowLeaderBoardBox","VKWebAppShowInviteBox","VKWebAppShowRequestBox","VKWebAppAddToFavorites","VKWebAppShowStoryBox","VKWebAppStorageGet","VKWebAppStorageGetKeys","VKWebAppStorageSet","VKWebAppFlashGetInfo","VKWebAppSubscribeStoryApp","VKWebAppOpenWallPost","VKWebAppCheckAllowedScopes","VKWebAppCheckBannerAd","VKWebAppHideBannerAd","VKWebAppShowBannerAd","VKWebAppCheckNativeAds","VKWebAppShowNativeAds","VKWebAppRetargetingPixel","VKWebAppConversionHit","VKWebAppShowSubscriptionBox","VKWebAppCheckSurvey","VKWebAppShowSurvey","VKWebAppScrollTop","VKWebAppScrollTopStart","VKWebAppScrollTopStop","VKWebAppShowSlidesSheet","VKWebAppTranslate","VKWebAppRecommend","VKWebAppAddToProfile","VKWebAppGetFriends"],c&&!l?["VKWebAppResizeWindow","VKWebAppAddToMenu","VKWebAppShowInstallPushBox","VKWebAppShowCommunityWidgetPreviewBox","VKWebAppCallStart","VKWebAppCallJoin","VKWebAppCallGetStatus"]:["VKWebAppShowImages"],!0),f=i?window.AndroidBridge:void 0,A=s?window.webkit.messageHandlers:void 0,w=c?parent:void 0;var W,V,K,S,h,v,y,m,E,g;!function(e){e.REWARD="reward",e.INTERSTITIAL="interstitial"}(W||(W={})),function(e){e.RESIZE="resize",e.OVERLAY="overlay"}(V||(V={})),function(e){e.TOP="top",e.BOTTOM="bottom"}(K||(K={})),function(e){e.LEFT="left",e.RIGHT="right",e.CENTER="center"}(S||(S={})),function(e){e.COMPACT="compact",e.REGULAR="regular"}(h||(h={})),function(e){e.HORIZONTAL="horizontal",e.VERTICAL="vertical"}(v||(v={})),function(e){e.CAMERA="camera",e.LOCATION="location",e.PHOTO="photo"}(y||(y={})),function(e){e.RU="ru",e.UK="uk",e.UA="ua",e.EN="en",e.BE="be",e.KZ="kz",e.PT="pt",e.ES="es"}(m||(m={})),function(e){e.ADMIN="admin",e.EDITOR="editor",e.MEMBER="member",e.MODER="moder",e.NONE="none"}(E||(E={})),function(e){e.DESKTOP_WEB="desktop_web",e.DESKTOP_WEB_MESSENGER="desktop_web_messenger",e.DESKTOP_APP_MESSENGER="desktop_app_messenger",e.MOBILE_WEB="mobile_web",e.MOBILE_ANDROID="mobile_android",e.MOBILE_ANDROID_MESSENGER="mobile_android_messenger",e.MOBILE_IPHONE="mobile_iphone",e.MOBILE_IPHONE_MESSENGER="mobile_iphone_messenger",e.MOBILE_IPAD="mobile_ipad"}(g||(g={}));var O=function(e){var i=void 0,l=[],W=Math.random().toString(36).substring(2,5);function V(e){l.push(e)}function K(e){return a?!(!f||"function"!=typeof f[e]):s?!(!A||!A[e]||"function"!=typeof A[e].postMessage):!!c&&b.includes(e)}function S(){return s||a}function h(){return c&&window.parent!==window}function v(){return S()||h()}function y(e){if(s||a)return o([],l,!0).map((function(t){return t.call(null,e)}));var t=null==e?void 0:e.data;if(c&&t){if(u&&"string"==typeof t)try{t=JSON.parse(t)}catch(e){}var n=t.type,r=t.data,p=t.frameId;n&&("VKWebAppSettings"!==n?o([],l,!0).map((function(e){return e({detail:{type:n,data:r}})})):i=p)}}u&&/(android)/i.test(navigator.userAgent)?document.addEventListener(d,y):"undefined"!=typeof window&&"addEventListener"in window&&window.addEventListener(d,y);var m=r((function(t,n){f&&f[t]?f[t](JSON.stringify(n)):A&&A[t]&&"function"==typeof A[t].postMessage?A[t].postMessage(n):u?window.ReactNativeWebView.postMessage(JSON.stringify({handler:t,params:n})):w&&"function"==typeof w.postMessage&&w.postMessage({handler:t,params:n,type:"vk-connect",webFrameId:i,connectVersion:e},"*")}),V,W);return V((function(e){if(e.detail&&"SetSupportedHandlers"===e.detail.type)p=new Set(e.detail.data.supportedHandlers)})),{send:m,sendPromise:m,subscribe:V,unsubscribe:function(e){var t=l.indexOf(e);t>-1&&l.splice(t,1)},supports:function(e){return console.warn("bridge.supports method is deprecated. Use bridge.supportsAsync instead."),K(e)},supportsAsync:function(e){return t(this,void 0,void 0,(function(){var t;return n(this,(function(n){switch(n.label){case 0:if(a||s)return[2,K(e)];if(p)return[2,p.has(e)];n.label=1;case 1:return n.trys.push([1,3,,4]),[4,m("SetSupportedHandlers")];case 2:return t=n.sent(),p=new Set(t.supportedHandlers),[3,4];case 3:return n.sent(),p=new Set(["VKWebAppInit"]),[3,4];case 4:return[2,p.has(e)]}}))}))},isWebView:S,isIframe:h,isEmbedded:v,isStandalone:function(){return!v()}}}("2.15.10");window.vkBridge=window.vkConnect=O}();
+
+
+</script><script>
+const vkHost = window.vkBridge;
+if (vkHost.isEmbedded() || new URLSearchParams(location.search).has('vk_app_id')) {
+  vkHost.send('VKWebAppInit', {}).catch(() => {
+    console.warn('ВКонтакте не подтвердил инициализацию игры.');
+  });
+}
+</script></head>
+<body><header><b><i>◉</i> АРЕНА: РИКОШЕТ</b><span id="account">Подключение…</span></header>
+<main><section class="panel"><small>ПИНБОЛ • АРКАДА</small><h1>РИКОШЕТ<span>.</span></h1>
+<p id="hint" role="status">Защищайте свои ворота. Направляйте шар краем отражателя.</p>
+<div id="menu"><button id="solo">Продолжить волну <strong>↗</strong></button><button id="create">Создать дуэль <strong>＋</strong></button><form id="join"><input id="code" maxlength="8" placeholder="Код комнаты" aria-label="Код комнаты" required><button>Войти</button></form></div>
+<div id="playing" hidden><button id="hit">Сильный удар <strong>✦</strong></button><button id="leave">Выйти</button></div>
+<label class="scheme">Управление <select id="scheme"><option value="thumb">Одним пальцем</option><option value="direct">По позиции</option></select></label>
+<p id="gesture"></p>
+<div class="stats"><small>ПРОГРЕСС</small><p id="stats">—</p></div></section>
+<div class="stage"><section class="cabinet"><div class="plate"><b>АРЕНА <em>/</em> РИКОШЕТ</b><span id="mode">ТРЕНИРОВОЧНАЯ АРЕНА</span></div>
+<canvas id="table" width="1000" height="1000" aria-label="Поле пинбола. Ваш отражатель внизу"></canvas>
+<footer><b id="hud">ВОЛНА 01</b><span id="power"></span></footer></section></div></main><script>const bumpers = [[310,310],[690,310],[310,690],[690,690]];
+const clamp = (n,min,max) => Math.max(min,Math.min(max,n));
+function serve() {
+  const angle = Math.random()*Math.PI*2;
+  return {x:500,y:500,vx:360*Math.cos(angle),vy:360*Math.sin(angle)};
+}
+function arena(solo, wave=1) {
+  return {solo,wave,t:0,balls:[serve()],hp:[8,8,8,8],score:[0,0],winner:null,
+    pads:Array.from({length:solo?4:2},()=>({x:500,target:500,hit:-10,perfect:0}))};
+}
+function input(g,i,x,hit) {
+  const p=g.pads[i];
+  if(Number.isFinite(x)) p.target=clamp(x,75,925);
+  if(hit && g.t-p.hit>=0.8) p.hit=g.t;
+}
+function wall(g,b,i) {
+  const vertical=i>=2, low=i===1||i===2;
+  const axis=vertical?'x':'y', vel=vertical?'vx':'vy', along=vertical?'y':'x';
+  const inward=low?1:-1;
+  if(b[vel]*inward>=0) return;
+  const depth=low?b[axis]:1000-b[axis], p=g.pads[i];
+  const active=p && (!g.solo || g.hp[i]>0);
+  if(active && depth<=48 && depth>=30 && Math.abs(b[along]-p.x)<=89) {
+    const angle=clamp((b[along]-p.x)/85,-1,1)*1.02;
+    const perfect=g.t-p.hit<0.17;
+    const speed=Math.min(740,Math.hypot(b.vx,b.vy)+(perfect?160:12));
+    if(perfect) p.perfect++;
+    b[vel]=inward*Math.cos(angle)*speed;
+    b[vertical?'vy':'vx']=Math.sin(angle)*speed;
+  } else if(depth<=14) {
+    if(active && Math.abs(b[along]-500)<190) {
+      if(g.solo) g.hp[i]--; else g.score[1-i]++;
+      Object.assign(b,serve());
+    } else { b[vel]*=-1; b[axis]=low?14:986; }
+  }
+}
+function step(g,dt) {
+  if(g.winner!==null) return;
+  g.t+=dt;
+  if(g.solo && g.balls.length<1+Math.min(2,Math.floor(g.t/35))) g.balls.push(serve());
+  g.pads.forEach((p,i)=>{
+    const bot=g.solo && i>0;
+    if(bot) {
+      const depth=b=>i===1?b.y:i===2?b.x:1000-b.x;
+      const b=g.balls.reduce((a,b)=>depth(a)<depth(b)?a:b);
+      p.target=clamp((i===1?b.x:b.y)+Math.sin(g.t*2+i)*55,75,925);
+    }
+    const limit=dt*(bot?Math.min(680,210+g.wave*18):1000);
+    p.x+=clamp(p.target-p.x,-limit,limit);
+  });
+  for(const b of g.balls) {
+    b.x+=b.vx*dt; b.y+=b.vy*dt;
+    for(const [x,y] of bumpers) {
+      const dx=b.x-x, dy=b.y-y, d=Math.hypot(dx,dy);
+      if(d>=59 || d===0) continue;
+      const nx=dx/d,ny=dy/d,dot=b.vx*nx+b.vy*ny;
+      b.x=x+59*nx; b.y=y+59*ny;
+      if(dot<0){b.vx-=2*dot*nx;b.vy-=2*dot*ny;}
+    }
+    for(let i=0;i<4;i++) wall(g,b,i);
+  }
+  for(let i=0;i<g.balls.length;i++)for(const other of g.balls.slice(i+1)){
+    const b=g.balls[i],dx=other.x-b.x,dy=other.y-b.y,d=Math.hypot(dx,dy);
+    if(d===0 || d>=28)continue;
+    const nx=dx/d,ny=dy/d,overlap=(28-d)/2;
+    b.x-=nx*overlap;b.y-=ny*overlap;other.x+=nx*overlap;other.y+=ny*overlap;
+    const relative=(b.vx-other.vx)*nx+(b.vy-other.vy)*ny;
+    if(relative>0){
+      b.vx-=relative*nx;b.vy-=relative*ny;other.vx+=relative*nx;other.vy+=relative*ny;
+      for(const ball of [b,other]){
+        const scale=Math.min(1,740/Math.hypot(ball.vx,ball.vy));ball.vx*=scale;ball.vy*=scale;
+      }
+    }
+  }
+  if(g.solo) {
+    if(g.hp[0]<=0 || g.hp.slice(1).every(h=>h<=0) || g.t>=150)
+      g.winner=g.hp[0]>0 && g.hp[0]>=Math.max(...g.hp.slice(1))?0:1;
+  } else if(Math.max(...g.score)>=7 || (g.t>=120 && g.score[0]!==g.score[1]))
+    g.winner=g.score[0]>g.score[1]?0:1;
+}
+
+const $=id=>document.getElementById(id);
+const table=$('table'), ctx=table.getContext('2d');
+const view=new URLSearchParams(location.search).get('view') || (location.pathname.endsWith('/mobile.html')?'mobile':location.pathname.endsWith('/web.html')?'web':'auto');
+
+let game=null,seat=0,target=500,hit=false,profile,online=true,inRoom=false;
+const saveKey='rikoshet-local-v1';
+function loadLocal(){
+  const fresh={wave:1,xp:0,shards:0,mmr:1000};
+  try {
+    const stored=JSON.parse(localStorage.getItem(saveKey));
+    if(stored && ['wave','xp','shards'].every(k=>Number.isSafeInteger(stored[k]) && stored[k]>=0) && stored.wave>0) return {...fresh,wave:stored.wave,xp:stored.xp,shards:stored.shards};
+  } catch {}
+  return fresh;
+}
+function endLocal(finished){
+  if(finished){
+    const won=game.winner===0,bonus=Math.min(10,game.pads[0].perfect);
+    profile.xp+=Math.floor((35+20*won+bonus)*0.7);
+    profile.shards+=Math.floor((20+10*won+bonus)*0.7);
+    if(won)profile.wave++;
+    $('hint').textContent=won?'Победа! Открыта следующая волна.':'Волна окончена.';
+    try{localStorage.setItem(saveKey,JSON.stringify(profile));}catch{}
+  }else $('hint').textContent='Волна прервана.';
+  game=null;controls(false);progress(profile);$('mode').textContent='МЕЖДУ ВОЛНАМИ';
+}
+function send(m){
+  if(!game)return;
+  if(m.type==='input')input(game,0,m.x,m.hit);
+  if(m.type==='leave')endLocal(false);
+}
+function start(type){
+  if(type!=='solo'||game)return;
+  game=arena(true,profile.wave);target=500;hit=false;controls(true);
+  $('hint').textContent='Вы снизу. Защитите ворота от трёх ботов.';
+  $('mode').textContent='БЕСКОНЕЧНЫЕ ВОЛНЫ';
+}
+function connect(){
+  profile=loadLocal();progress(profile);controls(false);
+  $('account').textContent='Одиночная игра';
+  $('join').style.display='none';$('create').style.display='none';
+  $('hint').textContent='Сыграйте против трёх ботов. Прогресс сохраняется на этом устройстве.';
+  let last=performance.now(),carry=0;
+  function simulate(now){
+    carry+=Math.min(.1,(now-last)/1000);last=now;
+    while(carry>=1/60){carry-=1/60;if(game){step(game,1/60);if(game.winner!==null)endLocal(true);}}
+    requestAnimationFrame(simulate);
+  }
+  requestAnimationFrame(simulate);
+}
+function controls(active){
+  inRoom=active;$('menu').hidden=active;$('playing').hidden=!active;
+  $('hit').disabled=!game;document.body.classList.toggle('match',active);
+  document.querySelectorAll('#menu button').forEach(b=>b.disabled=!online);
+}
+function progress(p){
+  profile=p;let xp=p.xp,l=1,cost=70;
+  while(xp>=cost){xp-=cost;l++;cost=70+18*(l-1)+2*(l-1)**2;}
+  $('stats').textContent='Уровень '+l+' · Опыт '+xp+'/'+cost+' · Осколки '+p.shards+' · Рейтинг '+p.mmr;
+  $('solo').firstChild.textContent='Волна '+p.wave+' · играть ';
+}
+$('solo').onclick=()=>start('solo');$('create').onclick=()=>start('create');
+$('join').onsubmit=e=>{e.preventDefault();start('join');};$('leave').onclick=()=>send({type:'leave'});
+$('hit').onclick=()=>{if(game)hit=true;};
+const scheme=$('scheme');
+const defaultThumb=view==='mobile' || (view!=='web' && matchMedia('(pointer:coarse)').matches);
+scheme.value=defaultThumb?'thumb':'direct';
+const preferenceKey='rikoshet-controls-'+view;
+try{const saved=localStorage.getItem(preferenceKey);if(['direct','thumb'].includes(saved))scheme.value=saved;}catch{}
+function explainScheme(){
+  $('gesture').textContent=scheme.value==='thumb'?'Веди пальцем по полю. Отпусти перед касанием шара для удара.':'Укажи позицию на поле. Касание или щелчок — удар. Клавиши: ← → и пробел.';
+}
+scheme.onchange=()=>{explainScheme();try{localStorage.setItem(preferenceKey,scheme.value);}catch{}};
+explainScheme();
+let pointer=null,previousX=0;
+function moveToPointer(e){
+  const box=table.getBoundingClientRect();
+  if(scheme.value==='thumb'){
+    const delta=(e.clientX-previousX)*1800/box.width;
+    target=Math.max(75,Math.min(925,target+(seat===1?-delta:delta)));
+  }else{
+    const x=1000*(e.clientX-box.left)/box.width;
+    target=seat===1?1000-x:x;
+  }
+  previousX=e.clientX;
+}
+table.onpointerdown=e=>{
+  if(!game || pointer!==null || e.button!==0)return;
+  pointer=e.pointerId;previousX=e.clientX;table.setPointerCapture(pointer);moveToPointer(e);
+  if(scheme.value==='direct')hit=true;
+};
+table.onpointermove=e=>{
+  if(game && (e.pointerId===pointer || (pointer===null && scheme.value==='direct' && e.pointerType==='mouse')))moveToPointer(e);
+};
+table.onpointerup=e=>{
+  if(e.pointerId!==pointer)return;
+  moveToPointer(e);pointer=null;if(game && scheme.value==='thumb')hit=true;
+};
+table.onlostpointercapture=table.onpointercancel=()=>{pointer=null;};
+const keys=new Set();
+onkeydown=e=>{if(!game || e.target.matches('select,input') || (e.code==='Space' && e.target.matches('button') && e.target!==$('solo')))return;if(['ArrowLeft','ArrowRight','Space'].includes(e.code)){e.preventDefault();keys.add(e.code);if(e.code==='Space'&&!e.repeat)hit=true;}};
+onkeyup=e=>keys.delete(e.code);onblur=()=>keys.clear();
+setInterval(()=>{if(!game||!online)return;target=Math.max(75,Math.min(925,target+(seat===1?-1:1)*35*(Number(keys.has('ArrowRight'))-Number(keys.has('ArrowLeft')))));send({type:'input',x:target,hit});hit=false;},33);
+// The playfield artwork is cached so mobile clients only redraw moving objects.
+const stage=document.querySelector('.stage'), cabinet=document.querySelector('.cabinet');
+function fitArena(){
+  let width=Math.min(stage.clientWidth,stage.clientHeight,760);
+  cabinet.style.width=width+'px';
+  // Labels may wrap once the board narrows, so measure the finished cabinet.
+  for(let pass=0;pass<4;pass++){
+    const excess=cabinet.offsetHeight-stage.clientHeight;
+    if(excess<=0)break;
+    width=Math.max(6,width-excess);cabinet.style.width=width+'px';
+  }
+}
+const fitObserver=new ResizeObserver(fitArena);
+for(const el of [stage,cabinet.querySelector('footer'),cabinet.querySelector('.plate')])fitObserver.observe(el);
+function goalMark(x,y,angle,label,mine){
+  ctx.save();ctx.translate(x,y);ctx.rotate(angle);
+  ctx.fillStyle=mine?'#ffd19a':'#c6f9e7';ctx.textAlign='center';ctx.font='bold 30px Arial';
+  ctx.fillText(label,0,0);ctx.restore();
+}
+let lastPerfect=0,flashUntil=0;
+const art=document.createElement('canvas');art.width=art.height=1000;
+const a=art.getContext('2d');
+function disc(c,x,y,r,colors){
+  const gradient=c.createRadialGradient(x-r*.32,y-r*.44,1,x,y,r);
+  colors.forEach(([stop,color])=>gradient.addColorStop(stop,color));
+  c.fillStyle=gradient;c.beginPath();c.arc(x,y,r,0,Math.PI*2);c.fill();
+}
+const felt=a.createLinearGradient(0,0,1000,1000);
+felt.addColorStop(0,'#346456');felt.addColorStop(.5,'#1b4239');felt.addColorStop(1,'#102d29');a.fillStyle=felt;a.fillRect(0,0,1000,1000);
+a.fillStyle='#93ae8b38';for(let y=15;y<1000;y+=20)for(let x=15;x<1000;x+=20)a.fillRect(x,y,2,2);
+a.strokeStyle='#bbd6ae60';a.lineWidth=3;a.strokeRect(22,22,956,956);
+for(let i=0;i<4;i++){a.save();a.translate(500,500);a.rotate(Math.PI*i/2);a.beginPath();a.moveTo(-470,-220);a.lineTo(-470,-370);a.lineTo(-370,-470);a.lineTo(-220,-470);a.stroke();a.restore();}
+a.beginPath();a.arc(500,500,176,0,Math.PI*2);a.stroke();a.beginPath();a.arc(500,500,162,0,Math.PI*2);a.stroke();
+a.save();a.translate(500,500);a.rotate(-.24);a.textAlign='center';a.fillStyle='#d4d3a46b';a.font='italic 900 75px Arial';a.fillText('АРЕНА',0,17);a.font='bold 26px monospace';a.fillText('Р И К О Ш Е Т',0,58);a.restore();
+for(const x of [310,690])for(const y of [310,690]){
+  disc(a,x,y+10,50,[[0,'#647569'],[.8,'#283730'],[1,'#0d211a']]);
+  disc(a,x,y,46,[[0,'#fff5c2'],[.43,'#ffc37c'],[.66,'#e9844b'],[.72,'#ffce84'],[.83,'#91432c'],[.94,'#ffc89b'],[1,'#463f31']]);
+  a.fillStyle='#783d27';a.font='bold 27px Arial';a.textAlign='center';a.fillText('✦',x,y+8);
+}
+function render(){
+  ctx.save();if(seat===1 && game){ctx.translate(1000,1000);ctx.rotate(Math.PI);}
+  ctx.drawImage(art,0,0);
+  const pads=game?.pads||Array.from({length:4},()=>({x:500}));
+  pads.forEach((p,i)=>{
+    if(game?.solo && game.hp[i]<=0)return;
+    ctx.save();if(i===1){ctx.translate(0,1000);ctx.scale(1,-1);}
+    if(i===2){ctx.translate(1000,0);ctx.rotate(Math.PI/2);ctx.scale(1,1);}
+    if(i===3){ctx.translate(1000,1000);ctx.rotate(-Math.PI/2);ctx.translate(0,-1000); }
+    const mine=i===(game?seat:0);
+    ctx.fillStyle=mine?'#ffc382':'#a0cfc3';ctx.fillRect(310,988,380,12);
+    const gradient=ctx.createLinearGradient(0,951,0,979);gradient.addColorStop(0,'#fff5c8');gradient.addColorStop(.28,mine?'#ffbb71':'#a3e0d2');gradient.addColorStop(.75,mine?'#db6837':'#417e70');gradient.addColorStop(1,'#392f27');
+    ctx.fillStyle='#0b211b';ctx.fillRect(p.x-75,958,150,27);ctx.fillStyle=gradient;ctx.fillRect(p.x-75,952,150,27);ctx.restore();
+  });
+  for(const b of game?.balls||[{x:545,y:614}]){
+    disc(ctx,b.x+4,b.y+9,16,[[0,'#061c13'],[1,'#18362a55']]);disc(ctx,b.x,b.y,14,[[0,'white'],[.32,'#e5f8f1'],[.52,'#7daba0'],[.72,'#33463f'],[1,'#bdc9b4']]);
+  }
+  ctx.restore();
+  goalMark(500,913,0,'▼ СВОИ ВОРОТА',true);
+  if(!game?.solo || game.hp[1]>0)goalMark(500,98,0,'▲ ЗАБИВАЙ',false);
+  if(!game || game.solo){
+    if(!game || game.hp[2]>0)goalMark(98,500,-Math.PI/2,'▲ ЗАБИВАЙ',false);
+    if(!game || game.hp[3]>0)goalMark(902,500,Math.PI/2,'▲ ЗАБИВАЙ',false);
+  }
+  const pad=game?.pads[seat];
+  if(pad && pad.perfect>lastPerfect)flashUntil=performance.now()+550;
+  lastPerfect=pad?.perfect||0;
+  if(!game)flashUntil=0;
+  const elapsed=pad?game.t-pad.hit:10;
+  const perfect=performance.now()<flashUntil;
+  if(pad && (perfect || elapsed<0.17)){
+    const x=seat===1?1000-pad.x:pad.x;
+    ctx.strokeStyle=perfect?'#fff3aa':'#ffb05a';ctx.lineWidth=7;
+    ctx.beginPath();ctx.arc(x,963,perfect?85:64,-Math.PI,0);ctx.stroke();
+  }
+  $('power').textContent=!pad?'':perfect?'✦ Точный удар!':elapsed<0.17?'✦ Импульс':elapsed<0.8?'Удар заряжается':'✦ Удар готов';
+  $('hud').textContent=!game?'ВОЛНА '+String(profile?.wave||1).padStart(2,'0'):game.solo?'Волна '+game.wave+' · Прочность '+game.hp[0]+' · '+Math.ceil(150-game.t)+' с':game.score[seat]+' : '+game.score[1-seat]+' · '+(game.t<120?Math.ceil(120-game.t)+' с':'Овертайм');
+  requestAnimationFrame(render);
+}
+connect();render();
+</script></body></html>
