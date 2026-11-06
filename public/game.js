@@ -1,5 +1,6 @@
 const $=id=>document.getElementById(id);
 const table=$('table'), ctx=table.getContext('2d');
+const view=new URLSearchParams(location.search).get('view') || (location.pathname.endsWith('/mobile.html')?'mobile':location.pathname.endsWith('/web.html')?'web':'auto');
 const launch=location.search;
 if(launch) history.replaceState(null,'',location.pathname+location.hash);
 const bridge=window.vkBridge;
@@ -70,17 +71,68 @@ async function start(type){
 }
 $('solo').onclick=()=>start('solo');$('create').onclick=()=>start('create');
 $('join').onsubmit=e=>{e.preventDefault();start('join');};$('leave').onclick=()=>send({type:'leave'});
-$('hit').onpointerdown=()=>hit=true;
-function point(e){const box=table.getBoundingClientRect();const x=1000*(e.clientX-box.left)/box.width;target=seat===1?1000-x:x;}
-table.onpointerdown=e=>{table.setPointerCapture(e.pointerId);point(e);};
-table.onpointermove=e=>{if(e.pointerType==='mouse'||e.buttons)point(e);};
+$('hit').onclick=()=>{if(game)hit=true;};
+const scheme=$('scheme');
+const defaultThumb=view==='mobile' || (view!=='web' && matchMedia('(pointer:coarse)').matches);
+scheme.value=defaultThumb?'thumb':'direct';
+const preferenceKey='rikoshet-controls-'+view;
+try{const saved=localStorage.getItem(preferenceKey);if(['direct','thumb'].includes(saved))scheme.value=saved;}catch{}
+function explainScheme(){
+  $('gesture').textContent=scheme.value==='thumb'?'Веди пальцем по полю. Отпусти перед касанием шара для удара.':'Укажи позицию на поле. Касание или щелчок — удар. Клавиши: ← → и пробел.';
+}
+scheme.onchange=()=>{explainScheme();try{localStorage.setItem(preferenceKey,scheme.value);}catch{}};
+explainScheme();
+let pointer=null,previousX=0;
+function moveToPointer(e){
+  const box=table.getBoundingClientRect();
+  if(scheme.value==='thumb'){
+    const delta=(e.clientX-previousX)*1800/box.width;
+    target=Math.max(75,Math.min(925,target+(seat===1?-delta:delta)));
+  }else{
+    const x=1000*(e.clientX-box.left)/box.width;
+    target=seat===1?1000-x:x;
+  }
+  previousX=e.clientX;
+}
+table.onpointerdown=e=>{
+  if(!game || pointer!==null || e.button!==0)return;
+  pointer=e.pointerId;previousX=e.clientX;table.setPointerCapture(pointer);moveToPointer(e);
+  if(scheme.value==='direct')hit=true;
+};
+table.onpointermove=e=>{
+  if(game && (e.pointerId===pointer || (pointer===null && scheme.value==='direct' && e.pointerType==='mouse')))moveToPointer(e);
+};
+table.onpointerup=e=>{
+  if(e.pointerId!==pointer)return;
+  moveToPointer(e);pointer=null;if(game && scheme.value==='thumb')hit=true;
+};
+table.onlostpointercapture=table.onpointercancel=()=>{pointer=null;};
 const keys=new Set();
-onkeydown=e=>{if(!game)return;if(['ArrowLeft','ArrowRight','Space'].includes(e.code)){e.preventDefault();keys.add(e.code);if(e.code==='Space'&&!e.repeat)hit=true;}};
+onkeydown=e=>{if(!game || e.target.matches('select,input') || (e.code==='Space' && e.target.matches('button') && e.target!==$('solo')))return;if(['ArrowLeft','ArrowRight','Space'].includes(e.code)){e.preventDefault();keys.add(e.code);if(e.code==='Space'&&!e.repeat)hit=true;}};
 onkeyup=e=>keys.delete(e.code);onblur=()=>keys.clear();
 setInterval(()=>{if(!game||!online)return;target=Math.max(75,Math.min(925,target+(seat===1?-1:1)*35*(Number(keys.has('ArrowRight'))-Number(keys.has('ArrowLeft')))));send({type:'input',x:target,hit});hit=false;},33);
 let resizeTimer;onresize=()=>{clearTimeout(resizeTimer);resizeTimer=setTimeout(()=>ads(!inRoom).catch(()=>{}),250);};
 
 // The playfield artwork is cached so mobile clients only redraw moving objects.
+const stage=document.querySelector('.stage'), cabinet=document.querySelector('.cabinet');
+function fitArena(){
+  let width=Math.min(stage.clientWidth,stage.clientHeight,760);
+  cabinet.style.width=width+'px';
+  // Labels may wrap once the board narrows, so measure the finished cabinet.
+  for(let pass=0;pass<4;pass++){
+    const excess=cabinet.offsetHeight-stage.clientHeight;
+    if(excess<=0)break;
+    width=Math.max(6,width-excess);cabinet.style.width=width+'px';
+  }
+}
+const fitObserver=new ResizeObserver(fitArena);
+for(const el of [stage,cabinet.querySelector('footer'),cabinet.querySelector('.plate')])fitObserver.observe(el);
+function goalMark(x,y,angle,label,mine){
+  ctx.save();ctx.translate(x,y);ctx.rotate(angle);
+  ctx.fillStyle=mine?'#ffd19a':'#c6f9e7';ctx.textAlign='center';ctx.font='bold 30px Arial';
+  ctx.fillText(label,0,0);ctx.restore();
+}
+let lastPerfect=0,flashUntil=0;
 const art=document.createElement('canvas');art.width=art.height=1000;
 const a=art.getContext('2d');
 function disc(c,x,y,r,colors){
@@ -118,7 +170,25 @@ function render(){
     disc(ctx,b.x+4,b.y+9,16,[[0,'#061c13'],[1,'#18362a55']]);disc(ctx,b.x,b.y,14,[[0,'white'],[.32,'#e5f8f1'],[.52,'#7daba0'],[.72,'#33463f'],[1,'#bdc9b4']]);
   }
   ctx.restore();
-  $('hud').textContent=!game?'ВОЛНА '+String(profile?.wave||1).padStart(2,'0'):game.solo?'ВОЛНА '+game.wave+' · Прочность '+game.hp[0]+' · '+Math.ceil(150-game.t)+' с':game.score[seat]+' : '+game.score[1-seat]+' · '+(game.t<120?Math.ceil(120-game.t)+' с':'Овертайм');
+  goalMark(500,913,0,'▼ СВОИ ВОРОТА',true);
+  if(!game?.solo || game.hp[1]>0)goalMark(500,98,0,'▲ ЗАБИВАЙ',false);
+  if(!game || game.solo){
+    if(!game || game.hp[2]>0)goalMark(98,500,-Math.PI/2,'▲ ЗАБИВАЙ',false);
+    if(!game || game.hp[3]>0)goalMark(902,500,Math.PI/2,'▲ ЗАБИВАЙ',false);
+  }
+  const pad=game?.pads[seat];
+  if(pad && pad.perfect>lastPerfect)flashUntil=performance.now()+550;
+  lastPerfect=pad?.perfect||0;
+  if(!game)flashUntil=0;
+  const elapsed=pad?game.t-pad.hit:10;
+  const perfect=performance.now()<flashUntil;
+  if(pad && (perfect || elapsed<0.17)){
+    const x=seat===1?1000-pad.x:pad.x;
+    ctx.strokeStyle=perfect?'#fff3aa':'#ffb05a';ctx.lineWidth=7;
+    ctx.beginPath();ctx.arc(x,963,perfect?85:64,-Math.PI,0);ctx.stroke();
+  }
+  $('power').textContent=!pad?'':perfect?'✦ Точный удар!':elapsed<0.17?'✦ Импульс':elapsed<0.8?'Удар заряжается':'✦ Удар готов';
+  $('hud').textContent=!game?'ВОЛНА '+String(profile?.wave||1).padStart(2,'0'):game.solo?'Волна '+game.wave+' · Прочность '+game.hp[0]+' · '+Math.ceil(150-game.t)+' с':game.score[seat]+' : '+game.score[1-seat]+' · '+(game.t<120?Math.ceil(120-game.t)+' с':'Овертайм');
   requestAnimationFrame(render);
 }
 connect();render();

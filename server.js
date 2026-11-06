@@ -13,6 +13,7 @@ db.exec('PRAGMA journal_mode=WAL; CREATE TABLE IF NOT EXISTS players(id TEXT PRI
 const profile=id=>db.prepare('SELECT xp,shards,wave,mmr FROM players WHERE id=?').get(id);
 const clients=new Map(), rooms=new Map(), membership=new Map();
 const files=new Map(Object.entries({'/':['public/index.html','text/html'],'/game.js':['public/game.js','text/javascript'],'/style.css':['public/style.css','text/css'],'/bridge.js':['node_modules/@vkontakte/vk-bridge/dist/browser.min.js','text/javascript']}));
+for(const entry of ['/web.html','/mobile.html','/index.html'])files.set(entry,files.get('/'));
 const server=http.createServer((req,res)=>{
   res.setHeader('Referrer-Policy','no-referrer');
   res.setHeader('X-Content-Type-Options','nosniff');

@@ -5,7 +5,9 @@
 <p id="hint" role="status">Защищайте свои ворота. Направляйте шар краем отражателя.</p>
 <div id="menu"><button id="solo">Продолжить волну <strong>↗</strong></button><button id="create">Создать дуэль <strong>＋</strong></button><form id="join"><input id="code" maxlength="8" placeholder="Код комнаты" aria-label="Код комнаты" required><button>Войти</button></form></div>
 <div id="playing" hidden><button id="hit">Сильный удар <strong>✦</strong></button><button id="leave">Выйти</button></div>
+<label class="scheme">Управление <select id="scheme"><option value="thumb">Одним пальцем</option><option value="direct">По позиции</option></select></label>
+<p id="gesture"></p>
 <div class="stats"><small>ПРОГРЕСС</small><p id="stats">—</p></div></section>
-<section class="cabinet"><div class="plate"><b>АРЕНА <em>/</em> РИКОШЕТ</b><span id="mode">ТРЕНИРОВОЧНАЯ АРЕНА</span></div>
+<div class="stage"><section class="cabinet"><div class="plate"><b>АРЕНА <em>/</em> РИКОШЕТ</b><span id="mode">ТРЕНИРОВОЧНАЯ АРЕНА</span></div>
 <canvas id="table" width="1000" height="1000" aria-label="Поле пинбола. Ваш отражатель внизу"></canvas>
-<footer><b id="hud">ВОЛНА 01</b><span>← → движение · пробел — удар</span></footer></section></main></body></html>
+<footer><b id="hud">ВОЛНА 01</b><span id="power"></span></footer></section></div></main></body></html>

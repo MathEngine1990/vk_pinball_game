@@ -1,16 +1,49 @@
 <!doctype html>
 <html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Арена: Рикошет</title><style>:root{color-scheme:dark;font:16px system-ui,sans-serif;color:#f6edd9;background:#111815}*{box-sizing:border-box}body{margin:0;min-height:100svh;background:radial-gradient(ellipse at 70% 45%,#293b31,transparent 58%),#111815}header{height:64px;border-bottom:1px solid #435048;display:flex;align-items:center;justify-content:space-between;padding:0 5vw}header b,.plate b{font:900 italic 21px Arial;letter-spacing:-1px}i,em,h1 span{color:#ff7945}header span,footer span{font-size:12px;color:#c5cec3}main{min-height:calc(100svh - 64px);display:flex;align-items:center;justify-content:center;gap:5vw;padding:16px}.panel{width:clamp(230px,25vw,360px)}small,.plate span,footer b{font:700 11px monospace;letter-spacing:1.5px;color:#f3ad77}h1{font:1000 italic clamp(42px,5.2vw,82px)/1 Arial;margin:15px 0;letter-spacing:-.07em}.panel p{line-height:1.5;color:#c6d2c8}button,input{font:inherit;border-radius:6px;padding:12px 15px}button{cursor:pointer;font-weight:750;text-align:left;background:#25362c;color:#f4eddb;border:1px solid #526354}button:disabled{opacity:.45}button:hover:enabled{filter:brightness(1.16)}#menu>button,#playing button{width:100%;margin-bottom:8px}#solo,#hit{color:#201a14;background:#ff8953;border-color:#ffa279}strong{float:right}form{display:flex;gap:5px}input{min-width:0;width:100%;background:#101914;color:#fff;border:1px solid #526354}.stats{border-top:1px solid #48594d;margin-top:20px;padding-top:16px}.stats p{margin:5px 0}.cabinet{width:min(54vw,calc(100svh - 182px),760px);border-radius:13px;border:3px solid #647468;background:#27362d;box-shadow:0 8px 0 #0a100d,0 22px 45px #0008;overflow:hidden}.plate,footer{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:#1d2821;gap:8px}.plate span{font-size:9px}canvas{width:100%;display:block;touch-action:none}footer{font-size:11px}footer b{letter-spacing:0}body.match .stats{display:none}
-@media(max-width:740px){header{height:40px;padding:0 12px}main{min-height:0;flex-direction:column-reverse;gap:8px;padding:8px}.cabinet{width:min(96vw,calc(100svh - 270px));min-width:160px}.panel{width:min(96vw,500px)}.panel>small,h1,.stats{display:none}.panel p{margin:3px 0 8px;font-size:13px}#menu,#playing:not([hidden]){display:grid;grid-template-columns:1fr 1fr;gap:5px}#menu[hidden]{display:none}form{grid-column:span 2}#menu>button,#playing button{margin:0}button,input{padding:8px}.plate,footer{padding:4px 8px}footer span{font-size:10px}body.match .cabinet{width:min(96vw,calc(100svh - 190px))}}
-</style></head>
+html,body{height:100%;min-height:0}
+body{height:100dvh;display:grid;grid-template-rows:auto minmax(0,1fr);padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
+header{height:clamp(34px,7vh,60px)}
+main{min-height:0;min-width:0;display:grid;grid-template-columns:minmax(210px,340px) minmax(0,760px);grid-template-rows:minmax(0,1fr);align-items:center;gap:clamp(8px,3vw,54px);padding:clamp(5px,2vh,18px) clamp(6px,2vw,28px)}
+.panel{width:100%;min-height:0;max-height:100%;overflow:auto;overscroll-behavior:contain}
+.stage{height:100%;min-height:0;min-width:0;display:grid;place-items:center}
+.cabinet{width:min(100%,45vh);max-width:100%}
+canvas{aspect-ratio:1;user-select:none}
+.scheme{display:flex;gap:8px;align-items:center;justify-content:space-between;font-size:13px}
+select{min-width:0;max-width:65%;font:inherit;border:1px solid #526354;border-radius:6px;padding:8px;background:#1d3026;color:#f6edd9}
+#gesture{font-size:13px;color:#cad6c9;margin:5px 0}
+#power{font-weight:bold;color:#ffd28c}
+footer{min-height:24px;flex-wrap:wrap;gap:2px 8px}
+@media(max-width:740px) and (orientation:portrait){
+  header{padding:0 10px}header b{font-size:17px}
+  main{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr) auto;gap:5px;padding:5px 8px 8px}
+  .stage{grid-row:1}.panel{grid-row:2;width:min(100%,560px);justify-self:center;max-height:46dvh}
+  .panel>small,h1,.stats{display:none}
+  #menu,#playing:not([hidden]){display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px}
+  #menu[hidden]{display:none}form{grid-column:span 2}
+  #menu>button,#playing button{margin:0}button,input{padding:8px}#hint,#gesture{font-size:12px;line-height:1.25;margin:4px 0}
+  .scheme{margin-top:5px}
+}
+@media(max-height:540px) and (orientation:landscape){
+  header{height:30px;padding:0 12px}header b{font-size:16px}
+  main{grid-template-columns:minmax(165px,0.8fr) minmax(0,1.2fr);gap:8px;padding:4px 8px 6px}
+  .panel{max-width:340px;justify-self:end}.panel>small,h1,.stats{display:none}
+  #hint,#gesture{font-size:12px;line-height:1.25;margin:4px 0}button,input,select{padding:6px 9px}
+  #playing:not([hidden]){display:flex;gap:4px}#playing button{width:auto;flex:1}
+}
+@media(max-width:740px),(max-height:540px){
+  .plate,footer{padding:3px 6px}.plate b{font-size:14px}.plate span{letter-spacing:0;font-size:8px}footer b,#power{font-size:10px}.cabinet{box-shadow:none}
+}</style></head>
 <body><header><b><i>◉</i> АРЕНА: РИКОШЕТ</b><span id="account">Подключение…</span></header>
 <main><section class="panel"><small>ПИНБОЛ • АРКАДА</small><h1>РИКОШЕТ<span>.</span></h1>
 <p id="hint" role="status">Защищайте свои ворота. Направляйте шар краем отражателя.</p>
 <div id="menu"><button id="solo">Продолжить волну <strong>↗</strong></button><button id="create">Создать дуэль <strong>＋</strong></button><form id="join"><input id="code" maxlength="8" placeholder="Код комнаты" aria-label="Код комнаты" required><button>Войти</button></form></div>
 <div id="playing" hidden><button id="hit">Сильный удар <strong>✦</strong></button><button id="leave">Выйти</button></div>
+<label class="scheme">Управление <select id="scheme"><option value="thumb">Одним пальцем</option><option value="direct">По позиции</option></select></label>
+<p id="gesture"></p>
 <div class="stats"><small>ПРОГРЕСС</small><p id="stats">—</p></div></section>
-<section class="cabinet"><div class="plate"><b>АРЕНА <em>/</em> РИКОШЕТ</b><span id="mode">ТРЕНИРОВОЧНАЯ АРЕНА</span></div>
+<div class="stage"><section class="cabinet"><div class="plate"><b>АРЕНА <em>/</em> РИКОШЕТ</b><span id="mode">ТРЕНИРОВОЧНАЯ АРЕНА</span></div>
 <canvas id="table" width="1000" height="1000" aria-label="Поле пинбола. Ваш отражатель внизу"></canvas>
-<footer><b id="hud">ВОЛНА 01</b><span>← → движение · пробел — удар</span></footer></section></main><script>const bumpers = [[310,310],[690,310],[310,690],[690,690]];
+<footer><b id="hud">ВОЛНА 01</b><span id="power"></span></footer></section></div></main><script>const bumpers = [[310,310],[690,310],[310,690],[690,690]];
 const clamp = (n,min,max) => Math.max(min,Math.min(max,n));
 function serve() {
   const angle = Math.random()*Math.PI*2;
@@ -93,6 +126,7 @@ function step(g,dt) {
 
 const $=id=>document.getElementById(id);
 const table=$('table'), ctx=table.getContext('2d');
+const view=new URLSearchParams(location.search).get('view') || (location.pathname.endsWith('/mobile.html')?'mobile':location.pathname.endsWith('/web.html')?'web':'auto');
 
 let game=null,seat=0,target=500,hit=false,profile,online=true,inRoom=false;
 const saveKey='rikoshet-local-v1';
@@ -152,15 +186,66 @@ function progress(p){
 }
 $('solo').onclick=()=>start('solo');$('create').onclick=()=>start('create');
 $('join').onsubmit=e=>{e.preventDefault();start('join');};$('leave').onclick=()=>send({type:'leave'});
-$('hit').onpointerdown=()=>hit=true;
-function point(e){const box=table.getBoundingClientRect();const x=1000*(e.clientX-box.left)/box.width;target=seat===1?1000-x:x;}
-table.onpointerdown=e=>{table.setPointerCapture(e.pointerId);point(e);};
-table.onpointermove=e=>{if(e.pointerType==='mouse'||e.buttons)point(e);};
+$('hit').onclick=()=>{if(game)hit=true;};
+const scheme=$('scheme');
+const defaultThumb=view==='mobile' || (view!=='web' && matchMedia('(pointer:coarse)').matches);
+scheme.value=defaultThumb?'thumb':'direct';
+const preferenceKey='rikoshet-controls-'+view;
+try{const saved=localStorage.getItem(preferenceKey);if(['direct','thumb'].includes(saved))scheme.value=saved;}catch{}
+function explainScheme(){
+  $('gesture').textContent=scheme.value==='thumb'?'Веди пальцем по полю. Отпусти перед касанием шара для удара.':'Укажи позицию на поле. Касание или щелчок — удар. Клавиши: ← → и пробел.';
+}
+scheme.onchange=()=>{explainScheme();try{localStorage.setItem(preferenceKey,scheme.value);}catch{}};
+explainScheme();
+let pointer=null,previousX=0;
+function moveToPointer(e){
+  const box=table.getBoundingClientRect();
+  if(scheme.value==='thumb'){
+    const delta=(e.clientX-previousX)*1800/box.width;
+    target=Math.max(75,Math.min(925,target+(seat===1?-delta:delta)));
+  }else{
+    const x=1000*(e.clientX-box.left)/box.width;
+    target=seat===1?1000-x:x;
+  }
+  previousX=e.clientX;
+}
+table.onpointerdown=e=>{
+  if(!game || pointer!==null || e.button!==0)return;
+  pointer=e.pointerId;previousX=e.clientX;table.setPointerCapture(pointer);moveToPointer(e);
+  if(scheme.value==='direct')hit=true;
+};
+table.onpointermove=e=>{
+  if(game && (e.pointerId===pointer || (pointer===null && scheme.value==='direct' && e.pointerType==='mouse')))moveToPointer(e);
+};
+table.onpointerup=e=>{
+  if(e.pointerId!==pointer)return;
+  moveToPointer(e);pointer=null;if(game && scheme.value==='thumb')hit=true;
+};
+table.onlostpointercapture=table.onpointercancel=()=>{pointer=null;};
 const keys=new Set();
-onkeydown=e=>{if(!game)return;if(['ArrowLeft','ArrowRight','Space'].includes(e.code)){e.preventDefault();keys.add(e.code);if(e.code==='Space'&&!e.repeat)hit=true;}};
+onkeydown=e=>{if(!game || e.target.matches('select,input') || (e.code==='Space' && e.target.matches('button') && e.target!==$('solo')))return;if(['ArrowLeft','ArrowRight','Space'].includes(e.code)){e.preventDefault();keys.add(e.code);if(e.code==='Space'&&!e.repeat)hit=true;}};
 onkeyup=e=>keys.delete(e.code);onblur=()=>keys.clear();
 setInterval(()=>{if(!game||!online)return;target=Math.max(75,Math.min(925,target+(seat===1?-1:1)*35*(Number(keys.has('ArrowRight'))-Number(keys.has('ArrowLeft')))));send({type:'input',x:target,hit});hit=false;},33);
 // The playfield artwork is cached so mobile clients only redraw moving objects.
+const stage=document.querySelector('.stage'), cabinet=document.querySelector('.cabinet');
+function fitArena(){
+  let width=Math.min(stage.clientWidth,stage.clientHeight,760);
+  cabinet.style.width=width+'px';
+  // Labels may wrap once the board narrows, so measure the finished cabinet.
+  for(let pass=0;pass<4;pass++){
+    const excess=cabinet.offsetHeight-stage.clientHeight;
+    if(excess<=0)break;
+    width=Math.max(6,width-excess);cabinet.style.width=width+'px';
+  }
+}
+const fitObserver=new ResizeObserver(fitArena);
+for(const el of [stage,cabinet.querySelector('footer'),cabinet.querySelector('.plate')])fitObserver.observe(el);
+function goalMark(x,y,angle,label,mine){
+  ctx.save();ctx.translate(x,y);ctx.rotate(angle);
+  ctx.fillStyle=mine?'#ffd19a':'#c6f9e7';ctx.textAlign='center';ctx.font='bold 30px Arial';
+  ctx.fillText(label,0,0);ctx.restore();
+}
+let lastPerfect=0,flashUntil=0;
 const art=document.createElement('canvas');art.width=art.height=1000;
 const a=art.getContext('2d');
 function disc(c,x,y,r,colors){
@@ -198,7 +283,25 @@ function render(){
     disc(ctx,b.x+4,b.y+9,16,[[0,'#061c13'],[1,'#18362a55']]);disc(ctx,b.x,b.y,14,[[0,'white'],[.32,'#e5f8f1'],[.52,'#7daba0'],[.72,'#33463f'],[1,'#bdc9b4']]);
   }
   ctx.restore();
-  $('hud').textContent=!game?'ВОЛНА '+String(profile?.wave||1).padStart(2,'0'):game.solo?'ВОЛНА '+game.wave+' · Прочность '+game.hp[0]+' · '+Math.ceil(150-game.t)+' с':game.score[seat]+' : '+game.score[1-seat]+' · '+(game.t<120?Math.ceil(120-game.t)+' с':'Овертайм');
+  goalMark(500,913,0,'▼ СВОИ ВОРОТА',true);
+  if(!game?.solo || game.hp[1]>0)goalMark(500,98,0,'▲ ЗАБИВАЙ',false);
+  if(!game || game.solo){
+    if(!game || game.hp[2]>0)goalMark(98,500,-Math.PI/2,'▲ ЗАБИВАЙ',false);
+    if(!game || game.hp[3]>0)goalMark(902,500,Math.PI/2,'▲ ЗАБИВАЙ',false);
+  }
+  const pad=game?.pads[seat];
+  if(pad && pad.perfect>lastPerfect)flashUntil=performance.now()+550;
+  lastPerfect=pad?.perfect||0;
+  if(!game)flashUntil=0;
+  const elapsed=pad?game.t-pad.hit:10;
+  const perfect=performance.now()<flashUntil;
+  if(pad && (perfect || elapsed<0.17)){
+    const x=seat===1?1000-pad.x:pad.x;
+    ctx.strokeStyle=perfect?'#fff3aa':'#ffb05a';ctx.lineWidth=7;
+    ctx.beginPath();ctx.arc(x,963,perfect?85:64,-Math.PI,0);ctx.stroke();
+  }
+  $('power').textContent=!pad?'':perfect?'✦ Точный удар!':elapsed<0.17?'✦ Импульс':elapsed<0.8?'Удар заряжается':'✦ Удар готов';
+  $('hud').textContent=!game?'ВОЛНА '+String(profile?.wave||1).padStart(2,'0'):game.solo?'Волна '+game.wave+' · Прочность '+game.hp[0]+' · '+Math.ceil(150-game.t)+' с':game.score[seat]+' : '+game.score[1-seat]+' · '+(game.t<120?Math.ceil(120-game.t)+' с':'Овертайм');
   requestAnimationFrame(render);
 }
 connect();render();
