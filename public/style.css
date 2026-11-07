@@ -210,6 +210,7 @@ body.match #progress-overview { display: none; }
 #profile-panel { margin:7px 0; }
 #menu { grid-template-columns:1fr; }
 #peer-entry { margin:7px 0 0; }
+#solo, #peer-entry, #profile-panel > summary { text-align:left; padding:13px 16px; font:700 15px/1.25 Arial,sans-serif; min-height:46px; border-radius:8px; }
 #playing { flex-wrap:nowrap; align-items:center; gap:5px; }
 #playing button { flex:0 0 42px; width:42px; height:42px; min-height:42px; padding:0; font-size:22px; border-radius:10px; }
 #hit-label { position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); }

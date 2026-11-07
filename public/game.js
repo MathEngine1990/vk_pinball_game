@@ -146,7 +146,7 @@ function updatePause(){
   $('pause-text').textContent=networkWaiting?'Ожидаем соединения с соперником':confirmExit?'Награда за незавершённую волну не начисляется':'Нажми «Продолжить», когда будешь готов';
 }
 function showResult(result){
-  profilePanel.open=true;
+  profilePanel.open=false;
   confirmExit=false;updatePause();
   $('result').hidden=false;
   $('result-title').textContent=!result.reward?'Волна прервана':result.won?'Победа!':'Раунд завершён';
@@ -250,7 +250,7 @@ const fitObserver=new ResizeObserver(fitArena);
 for(const el of [stage,cabinet.querySelector('footer'),cabinet.querySelector('.plate'),$('ability'),$('touchpad')])fitObserver.observe(el);
 function goalMark(x,y,angle,label,mine){
   ctx.save();ctx.translate(x,y);ctx.rotate(angle);
-  ctx.fillStyle=mine?'#ffd19a':'#c6f9e7';ctx.textAlign='center';ctx.font='bold 30px Arial';
+    ctx.fillStyle=mine?'#ffb3a3':'#a4f7e2';ctx.textAlign='center';ctx.font='bold 30px Arial';
   ctx.fillText(label,0,0);ctx.restore();
 }
 let lastPerfect=0,flashUntil=0,lastGoalCount=0,eventUntil=0,lastBallCount=1;
@@ -316,12 +316,22 @@ function render(){
     if(i===3)ctx.transform(0,1,1,0,0,0);
     const mine=i===(game?seat:0);
     const skin=cosmetics.find(item=>item.id===(game?game.skins?.[i]:profile?.skin))||cosmetics[0];
-    ctx.fillStyle=mine?'#ffc382':'#70e0c5';ctx.fillRect(310,984,380,16);
-    const glow=ctx.createLinearGradient(0,900,0,1000);
-    glow.addColorStop(0,'transparent');glow.addColorStop(1,mine?'#ffb34a55':'#6af1c844');
-    ctx.fillStyle=glow;ctx.fillRect(310,900,380,84);
-    const gradient=ctx.createLinearGradient(0,951,0,979);gradient.addColorStop(0,'#fff5c8');gradient.addColorStop(.28,mine?skin.color:'#a3e0d2');gradient.addColorStop(.75,mine?skin.shade:'#417e70');gradient.addColorStop(1,'#392f27');
-    ctx.fillStyle='#0b211b';ctx.fillRect(p.x-75,958,150,27);ctx.fillStyle=gradient;ctx.fillRect(p.x-75,952,150,27);ctx.restore();
+    // Goals are recessed openings with a thin net and posts; paddles are solid raised objects.
+    const goalColor=mine?'#ff7966':'#4edfc1';
+    ctx.fillStyle='#050e10';ctx.fillRect(310,985,380,15);
+    ctx.strokeStyle=mine?'#9a4b45':'#287b70';ctx.lineWidth=2;
+    for(let x=320;x<690;x+=20){ctx.beginPath();ctx.moveTo(x,987);ctx.lineTo(x+8,1000);ctx.stroke();}
+    ctx.strokeStyle=goalColor;ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(310,998);ctx.lineTo(690,998);ctx.stroke();
+    ctx.fillStyle=goalColor;ctx.fillRect(304,979,6,21);ctx.fillRect(690,979,6,21);
+    const gradient=ctx.createLinearGradient(0,952,0,984);
+    gradient.addColorStop(0,'#fff9e7');gradient.addColorStop(.2,mine?skin.color:'#d8e2ef');gradient.addColorStop(.7,mine?skin.shade:'#63788d');gradient.addColorStop(1,'#27313b');
+    ctx.fillStyle='#020a0c';ctx.beginPath();ctx.roundRect(p.x-79,950,158,37,9);ctx.fill();
+    ctx.fillStyle=gradient;ctx.beginPath();ctx.roundRect(p.x-75,952,150,30,7);ctx.fill();
+    ctx.strokeStyle=mine?'#fff0c6':'#f2f7ff';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(p.x-65,954);ctx.lineTo(p.x+65,954);ctx.stroke();
+    // Three short grip marks move with the paddle, unlike the fixed goal net.
+    ctx.strokeStyle=mine?'#663315':'#344657';ctx.lineWidth=3;
+    for(const offset of [-9,0,9]){ctx.beginPath();ctx.moveTo(p.x+offset,962);ctx.lineTo(p.x+offset,974);ctx.stroke();}
+    ctx.restore();
   });
   for(const b of game?.balls||[{x:545,y:614}]){
     if(game && b.powerUntil>game.t){

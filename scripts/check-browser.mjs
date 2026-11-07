@@ -129,6 +129,7 @@ try {
     await evaluate('game.hp=[8,0,0,0]');
     await delay(120);
     assert.ok(await evaluate("!game && !$('result').hidden"));
+    assert.equal(await evaluate('profilePanel.open'),false,'Profile stays collapsed after a completed wave');
     assert.equal(await evaluate('profile.wave'),initialWave+1);
     assert.ok(await evaluate("!$('result-summary').hidden && $('result-summary').textContent.includes('Точные удары') && !$('result-level').hidden && $('xp-progress').value>0"),'Result statistics and progression visible after save');
     const xp=await evaluate('profile.xp');

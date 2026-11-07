@@ -58,7 +58,7 @@ async function start(type){
   if(saveStatus?.kind==='conflict'){$('hint').textContent='Выбери сохранение внизу меню, затем начни волну.';return;}
   game=arena(true,profile.wave,$('difficulty').value);game.skins=[profile.skin];target=500;
   resetInput();resetFeedback();controls(true);
-  $('hint').textContent='Защищай оранжевые ворота внизу. Забивай в три бирюзовых.';
+  $('hint').textContent='Защищай красные ворота внизу. Забивай в три бирюзовых.';
   $('mode').textContent='ВОЛНА '+game.wave+' · '+game.rules.name;$('solo').blur();
 }
 async function connect(){
