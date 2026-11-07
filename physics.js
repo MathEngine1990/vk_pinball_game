@@ -2,11 +2,14 @@ export const bumpers = [[310,310],[690,310],[310,690],[690,690]];
 const clamp = (n,min,max) => Math.max(min,Math.min(max,n));
 export function waveRules(wave) {
   const number = Number.isSafeInteger(wave) && wave > 0 ? wave : 1;
-  const tier = Math.floor((number - 1) / 3);
+  const tier = Math.floor((number - 1) / 6);
   const types = [
     {name: number === 1 ? 'Первый рикошет' : 'Классика', description: 'Четыре бампера. Новые шары через 35 и 70 секунд.', ballsAt: [35,70], layout: bumpers},
     {name: 'Перекрёстный огонь', description: 'Бамперы ромбом меняют углы атаки. Шары через 30 и 60 секунд.', ballsAt: [30,60], layout: [[500,270],[730,500],[500,730],[270,500]]},
-    {name: 'Мультибол', description: 'Второй шар уже через 20 секунд, третий через 40. Следи за всеми воротами.', ballsAt: [20,40], layout: bumpers}
+    {name: 'Мультибол', description: 'Второй шар уже через 20 секунд, третий через 40. Следи за всеми воротами.', ballsAt: [20,40], layout: bumpers},
+    {name: 'Узкий проход', description: 'Две пары бамперов оставляют коридор в центре. Шары через 30 и 65 секунд.', ballsAt: [30,65], layout: [[370,310],[630,310],[370,690],[630,690]]},
+    {name: 'Шесть рикошетов', description: 'Шесть бамперов вокруг центра. Ищи свободный угол. Шары через 35 и 70 секунд.', ballsAt: [35,70], layout: [[350,260],[650,260],[250,500],[750,500],[350,740],[650,740]]},
+    {name: 'Диагональ', description: 'Смещённые бамперы открывают диагональные атаки. Шары через 25 и 50 секунд.', ballsAt: [25,50], layout: [[300,300],[650,350],[350,650],[700,700]]}
   ];
   const type = types[(number - 1) % types.length];
   return {

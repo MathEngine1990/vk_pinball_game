@@ -87,7 +87,7 @@ function attach(dc){
         if(hostGame.winner!==null)return end(hostGame.winner);
         if(now-lastSent>=45){lastSent=now;snapshot();}
       }
-    },50);
+      },16);
   };
 }
 function create(roleName){

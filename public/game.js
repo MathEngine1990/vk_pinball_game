@@ -2,6 +2,37 @@ const $=id=>document.getElementById(id);
 const table=$('table'), ctx=table.getContext('2d');
 let game=null,seat=0,target=500,hit=false,profile,online=false,inRoom=false,adsEnabled=false;
 let networkWaiting=false,confirmExit=false;
+// All feedback is local: no audio downloads, analytics or network requests.
+let audioContext=null,lastTone=0,goalFlashUntil=0,goalFlashOwn=false;
+let previousBalls=[],sparks=[];
+const feedbackSettings={sound:false,haptics:false};
+try{const saved=JSON.parse(localStorage.getItem('rikoshet-feedback')||'{}');feedbackSettings.sound=saved.sound===true;feedbackSettings.haptics=saved.haptics===true;}catch{}
+function unlockAudio(){
+  if(!feedbackSettings.sound)return;
+  try{const Audio=window.AudioContext||window.webkitAudioContext;if(!Audio)return;audioContext ||= new Audio();if(audioContext.state==='suspended')audioContext.resume().catch(()=>{});}catch{}
+}
+addEventListener('pointerdown',unlockAudio);addEventListener('keydown',unlockAudio);
+function feedback(kind){
+  if(document.hidden||game?.paused)return;
+  if(feedbackSettings.haptics && kind!=='bounce')try{navigator.vibrate?.(kind==='goal'?45:20);}catch{}
+  const now=performance.now();
+  if(!feedbackSettings.sound||audioContext?.state!=='running'||now-lastTone<45)return;
+  lastTone=now;
+  try{
+    const osc=audioContext.createOscillator(),gain=audioContext.createGain(),t=audioContext.currentTime;
+    const frequency=kind==='goal'?130:kind==='perfect'?880:kind==='multi'?660:380;
+    osc.frequency.setValueAtTime(frequency,t);osc.frequency.exponentialRampToValueAtTime(frequency*.55,t+.12);
+    gain.gain.setValueAtTime(.045,t);gain.gain.exponentialRampToValueAtTime(.001,t+.14);
+    osc.connect(gain);gain.connect(audioContext.destination);osc.start(t);osc.stop(t+.15);
+    osc.onended=()=>{osc.disconnect();gain.disconnect();};
+  }catch{}
+}
+for(const [id,key] of [['sound-enabled','sound'],['haptics-enabled','haptics']]){
+  $(id).checked=feedbackSettings[key];
+  $(id).onchange=()=>{feedbackSettings[key]=$(id).checked;try{localStorage.setItem('rikoshet-feedback',JSON.stringify(feedbackSettings));}catch{}unlockAudio();if(feedbackSettings[key])feedback('perfect');};
+}
+try{$('help').open=localStorage.getItem('rikoshet-help-seen')!=='1';}catch{$('help').open=true;}
+$('help-done').onclick=()=>{$('help').open=false;try{localStorage.setItem('rikoshet-help-seen','1');}catch{}};
 function controls(active){
   inRoom=active;$('menu').hidden=active;$('playing').hidden=!active;
   $('online-menu').hidden=active || !networkMode;$('shop').hidden=active;
@@ -178,6 +209,7 @@ function goalMark(x,y,angle,label,mine){
 }
 let lastPerfect=0,flashUntil=0,lastGoalCount=0,eventUntil=0,lastBallCount=1;
 function resetFeedback(){
+  previousBalls=[];sparks=[];goalFlashUntil=0;
   lastPerfect=0;flashUntil=0;lastGoalCount=game?.goalCount||0;
   lastBallCount=game?.balls.length||1;eventUntil=0;$('event').textContent='';
 }
@@ -213,8 +245,23 @@ function arenaArt(layout){
   arenaCache.set(key,canvas);return canvas;
 }
 function render(){
+  const frameNow=performance.now();
+  if(game && !game.paused){
+    game.balls.forEach((b,i)=>{
+      const old=previousBalls[i];
+      if(old && Math.hypot(b.x-old.x,b.y-old.y)<100 && b.vx*old.vx+b.vy*old.vy<0){
+        sparks.push({x:b.x,y:b.y,until:frameNow+260});feedback('bounce');
+      }
+    });
+    previousBalls=game.balls.map(b=>({...b}));
+  }else previousBalls=[];
+  sparks=sparks.filter(s=>s.until>frameNow).slice(-12);
   ctx.save();if(seat===1 && game){ctx.translate(1000,1000);ctx.rotate(Math.PI);}
   ctx.drawImage(arenaArt(game ? game.rules?.bumpers || bumpers : waveRules(profile?.wave).bumpers),0,0);
+  for(const s of sparks){
+    const life=(s.until-frameNow)/260;ctx.globalAlpha=life;ctx.strokeStyle='#fff0ad';ctx.lineWidth=4;
+    ctx.beginPath();ctx.arc(s.x,s.y,16+(1-life)*40,0,Math.PI*2);ctx.stroke();ctx.globalAlpha=1;
+  }
   const pads=game?.pads||Array.from({length:4},()=>({x:500}));
   pads.forEach((p,i)=>{
     if(game?.solo && game.hp[i]<=0)return;
@@ -244,16 +291,20 @@ function render(){
     if(!game || game.hp[3]>0)goalMark(902,500,Math.PI/2,'▲ ЗАБИВАЙ',false);
   }
   const pad=game?.pads[seat];
-  if(pad && pad.perfect>lastPerfect){flashUntil=performance.now()+550;announce('Точный удар!','good');}
+  if(pad && pad.perfect>lastPerfect){flashUntil=performance.now()+550;announce('Точный удар!','good');feedback('perfect');}
   lastPerfect=pad?.perfect||0;
   if(!game)flashUntil=0;
   if(game && (game.goalCount||0)>lastGoalCount){
     lastGoalCount=game.goalCount;
     const own=game.lastGoal.side===seat;
+    goalFlashUntil=frameNow+650;goalFlashOwn=own;feedback('goal');
     announce(own?'Твои ворота · −1':'Гол сопернику! ',own?'bad':'good');
   }
   if(game && game.balls.length>lastBallCount){
-    lastBallCount=game.balls.length;announce('Мультибол · '+lastBallCount+' шара','good');
+    lastBallCount=game.balls.length;announce('Мультибол · '+lastBallCount+' шара','good');feedback('multi');
+  }
+  if(game && !game.paused && frameNow<goalFlashUntil){
+    ctx.globalAlpha=(goalFlashUntil-frameNow)/650;ctx.strokeStyle=goalFlashOwn?'#ff855f':'#8affd5';ctx.lineWidth=18;ctx.strokeRect(9,9,982,982);ctx.globalAlpha=1;
   }
   $('event').classList.toggle('visible',performance.now()<eventUntil && !game?.paused);
   const elapsed=pad?game.t-pad.hit:10;

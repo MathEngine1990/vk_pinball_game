@@ -10,7 +10,7 @@ test('wave variants have matching geometry, schedules and bounded difficulty',()
   for(const invalid of [0,-1,NaN,Infinity,'2'])assert.deepEqual(waveRules(invalid),waveRules(1));
   assert.deepEqual(waveRules(1).bumpers,bumpers);
   assert.notDeepEqual(waveRules(2).bumpers,bumpers);
-  for(const wave of [1,2,3,4,1000000]){
+  for(const wave of [1,2,3,4,5,6,7,1000000]){
     const g=arena(true,wave), rules=waveRules(wave);
     assert.ok(rules.speed<=480 && rules.botSpeed<=480 && rules.botReaction>=.1);
     assert.ok(Math.abs(Math.hypot(g.balls[0].vx,g.balls[0].vy)-rules.speed)<1e-8);
@@ -71,8 +71,8 @@ test('cooldown, goal event and shared solo rewards',()=>{
   assert.deepEqual(rewards(g,0),{xp:45,shards:28,wave:1,mmr:0});
 });
 
-test('three complete waves stay finite, bounded and always resolve',()=>{
-  for(const wave of [1,2,3]){
+test('all six wave layouts stay finite, bounded and always resolve',()=>{
+  for(const wave of [1,2,3,4,5,6]){
     const g=arena(true,wave);
     for(let tick=0;tick<9002 && g.winner===null;tick++){
       const nearest=g.balls.reduce((a,b)=>a.y>b.y?a:b);

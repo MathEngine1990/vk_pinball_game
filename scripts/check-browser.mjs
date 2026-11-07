@@ -63,7 +63,11 @@ try {
     await delay(500);
     assert.equal(await evaluate("scheme.value"),entry==='web'?'direct':'thumb');
     assert.ok(await evaluate("$('online-menu').hidden && $('create').hidden && $('join').hidden"),'Solo release has no unavailable online actions');
-    const initialWave=await evaluate('profile.wave');
+      await evaluate("$('help').open=true;$('help-done').click();$('sound-enabled').checked=true;$('sound-enabled').onchange();$('haptics-enabled').checked=true;$('haptics-enabled').onchange()");
+      await call('Page.reload');await delay(350);
+      assert.ok(await evaluate("!$('help').open && $('sound-enabled').checked && $('haptics-enabled').checked"),'Tutorial dismissal and feedback preferences persist');
+      await evaluate("$('sound-enabled').checked=false;$('sound-enabled').onchange();$('haptics-enabled').checked=false;$('haptics-enabled').onchange()");
+      const initialWave=await evaluate('profile.wave');
     assert.ok(await evaluate("$('wave-title').textContent.includes(waveRules(profile.wave).name)"),'Wave preview matches saved progression');
     await evaluate("$('solo').click()");
     await delay(100);

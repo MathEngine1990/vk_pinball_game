@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="ru"><head><meta charset="utf-8"><meta name="rikoshet-release" content="5a98c8ee14f4"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Арена: Рикошет</title><style>
+<html lang="ru"><head><meta charset="utf-8"><meta name="rikoshet-release" content="f422fec3c09b"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Арена: Рикошет</title><style>
 :root {
   color-scheme: dark;
   font: 15px Arial, sans-serif;
@@ -220,7 +220,10 @@ footer { flex-wrap: wrap; font-size: 11px; min-height: 24px; }
 <section id="queue-status" hidden role="status"><b>Поиск соперника…</b><p>Чем дольше поиск, тем шире диапазон рейтинга.</p><button id="cancel-search">Отменить поиск</button></section>
 <details id="shop"><summary>Оформление отражателя</summary><p>Только внешний вид. Скорость, размер и сила удара одинаковые.</p><div id="shop-items"></div><p id="purchase-confirm" hidden><span id="purchase-text"></span><button id="purchase-yes">Купить</button><button id="purchase-no">Отмена</button></p></details>
 <div id="playing" hidden><button id="hit"><span id="hit-label">✦ Удар готов</span><span id="hit-meter"></span></button><button id="pause">Пауза</button><button id="leave">Выйти</button></div>
-<details id="settings"><summary>Управление и чувствительность</summary>
+<details id="help"><summary>Как играть · 3 подсказки</summary><p>1. Защищай оранжевые ворота снизу. Забивай в бирюзовые ворота с надписью «ЗАБИВАЙ».</p><p>2. В режиме «Одним пальцем» веди пальцем по площадке под полем. Край отражателя меняет угол отскока.</p><p>3. Отпусти палец прямо перед касанием шара: окно точного удара — 0,17 секунды, перезарядка — 0,8 секунды.</p><p>В волне у каждого 8 прочности. Продержись 150 секунд с наибольшей прочностью или выбей всех ботов. В дуэли — 7 голов либо преимущество после 120 секунд.</p><button id="help-done">Понятно</button></details>
+<details id="settings"><summary>Управление, звук и вибрация</summary>
+<label class="scheme">Звук <input id="sound-enabled" type="checkbox"></label>
+<label class="scheme">Вибрация при голе и точном ударе <input id="haptics-enabled" type="checkbox"></label>
 <label class="scheme">Управление <select id="scheme"><option value="thumb">Одним пальцем</option><option value="direct">По позиции</option></select></label>
 <label class="scheme" id="sensitivity-row">Чувствительность <input id="sensitivity" type="range" min="0.7" max="2.2" step="0.1" value="1.4"><output id="sensitivity-value">1,4</output></label></details>
 <p id="gesture"></p>
@@ -281,11 +284,14 @@ const bumpers = [[310,310],[690,310],[310,690],[690,690]];
 const clamp = (n,min,max) => Math.max(min,Math.min(max,n));
 function waveRules(wave) {
   const number = Number.isSafeInteger(wave) && wave > 0 ? wave : 1;
-  const tier = Math.floor((number - 1) / 3);
+  const tier = Math.floor((number - 1) / 6);
   const types = [
     {name: number === 1 ? 'Первый рикошет' : 'Классика', description: 'Четыре бампера. Новые шары через 35 и 70 секунд.', ballsAt: [35,70], layout: bumpers},
     {name: 'Перекрёстный огонь', description: 'Бамперы ромбом меняют углы атаки. Шары через 30 и 60 секунд.', ballsAt: [30,60], layout: [[500,270],[730,500],[500,730],[270,500]]},
-    {name: 'Мультибол', description: 'Второй шар уже через 20 секунд, третий через 40. Следи за всеми воротами.', ballsAt: [20,40], layout: bumpers}
+    {name: 'Мультибол', description: 'Второй шар уже через 20 секунд, третий через 40. Следи за всеми воротами.', ballsAt: [20,40], layout: bumpers},
+    {name: 'Узкий проход', description: 'Две пары бамперов оставляют коридор в центре. Шары через 30 и 65 секунд.', ballsAt: [30,65], layout: [[370,310],[630,310],[370,690],[630,690]]},
+    {name: 'Шесть рикошетов', description: 'Шесть бамперов вокруг центра. Ищи свободный угол. Шары через 35 и 70 секунд.', ballsAt: [35,70], layout: [[350,260],[650,260],[250,500],[750,500],[350,740],[650,740]]},
+    {name: 'Диагональ', description: 'Смещённые бамперы открывают диагональные атаки. Шары через 25 и 50 секунд.', ballsAt: [25,50], layout: [[300,300],[650,350],[350,650],[700,700]]}
   ];
   const type = types[(number - 1) % types.length];
   return {
@@ -677,7 +683,7 @@ function attach(dc){
         if(hostGame.winner!==null)return end(hostGame.winner);
         if(now-lastSent>=45){lastSent=now;snapshot();}
       }
-    },50);
+      },16);
   };
 }
 function create(roleName){
@@ -790,6 +796,37 @@ const $=id=>document.getElementById(id);
 const table=$('table'), ctx=table.getContext('2d');
 let game=null,seat=0,target=500,hit=false,profile,online=false,inRoom=false,adsEnabled=false;
 let networkWaiting=false,confirmExit=false;
+// All feedback is local: no audio downloads, analytics or network requests.
+let audioContext=null,lastTone=0,goalFlashUntil=0,goalFlashOwn=false;
+let previousBalls=[],sparks=[];
+const feedbackSettings={sound:false,haptics:false};
+try{const saved=JSON.parse(localStorage.getItem('rikoshet-feedback')||'{}');feedbackSettings.sound=saved.sound===true;feedbackSettings.haptics=saved.haptics===true;}catch{}
+function unlockAudio(){
+  if(!feedbackSettings.sound)return;
+  try{const Audio=window.AudioContext||window.webkitAudioContext;if(!Audio)return;audioContext ||= new Audio();if(audioContext.state==='suspended')audioContext.resume().catch(()=>{});}catch{}
+}
+addEventListener('pointerdown',unlockAudio);addEventListener('keydown',unlockAudio);
+function feedback(kind){
+  if(document.hidden||game?.paused)return;
+  if(feedbackSettings.haptics && kind!=='bounce')try{navigator.vibrate?.(kind==='goal'?45:20);}catch{}
+  const now=performance.now();
+  if(!feedbackSettings.sound||audioContext?.state!=='running'||now-lastTone<45)return;
+  lastTone=now;
+  try{
+    const osc=audioContext.createOscillator(),gain=audioContext.createGain(),t=audioContext.currentTime;
+    const frequency=kind==='goal'?130:kind==='perfect'?880:kind==='multi'?660:380;
+    osc.frequency.setValueAtTime(frequency,t);osc.frequency.exponentialRampToValueAtTime(frequency*.55,t+.12);
+    gain.gain.setValueAtTime(.045,t);gain.gain.exponentialRampToValueAtTime(.001,t+.14);
+    osc.connect(gain);gain.connect(audioContext.destination);osc.start(t);osc.stop(t+.15);
+    osc.onended=()=>{osc.disconnect();gain.disconnect();};
+  }catch{}
+}
+for(const [id,key] of [['sound-enabled','sound'],['haptics-enabled','haptics']]){
+  $(id).checked=feedbackSettings[key];
+  $(id).onchange=()=>{feedbackSettings[key]=$(id).checked;try{localStorage.setItem('rikoshet-feedback',JSON.stringify(feedbackSettings));}catch{}unlockAudio();if(feedbackSettings[key])feedback('perfect');};
+}
+try{$('help').open=localStorage.getItem('rikoshet-help-seen')!=='1';}catch{$('help').open=true;}
+$('help-done').onclick=()=>{$('help').open=false;try{localStorage.setItem('rikoshet-help-seen','1');}catch{}};
 function controls(active){
   inRoom=active;$('menu').hidden=active;$('playing').hidden=!active;
   $('online-menu').hidden=active || !networkMode;$('shop').hidden=active;
@@ -966,6 +1003,7 @@ function goalMark(x,y,angle,label,mine){
 }
 let lastPerfect=0,flashUntil=0,lastGoalCount=0,eventUntil=0,lastBallCount=1;
 function resetFeedback(){
+  previousBalls=[];sparks=[];goalFlashUntil=0;
   lastPerfect=0;flashUntil=0;lastGoalCount=game?.goalCount||0;
   lastBallCount=game?.balls.length||1;eventUntil=0;$('event').textContent='';
 }
@@ -1001,8 +1039,23 @@ function arenaArt(layout){
   arenaCache.set(key,canvas);return canvas;
 }
 function render(){
+  const frameNow=performance.now();
+  if(game && !game.paused){
+    game.balls.forEach((b,i)=>{
+      const old=previousBalls[i];
+      if(old && Math.hypot(b.x-old.x,b.y-old.y)<100 && b.vx*old.vx+b.vy*old.vy<0){
+        sparks.push({x:b.x,y:b.y,until:frameNow+260});feedback('bounce');
+      }
+    });
+    previousBalls=game.balls.map(b=>({...b}));
+  }else previousBalls=[];
+  sparks=sparks.filter(s=>s.until>frameNow).slice(-12);
   ctx.save();if(seat===1 && game){ctx.translate(1000,1000);ctx.rotate(Math.PI);}
   ctx.drawImage(arenaArt(game ? game.rules?.bumpers || bumpers : waveRules(profile?.wave).bumpers),0,0);
+  for(const s of sparks){
+    const life=(s.until-frameNow)/260;ctx.globalAlpha=life;ctx.strokeStyle='#fff0ad';ctx.lineWidth=4;
+    ctx.beginPath();ctx.arc(s.x,s.y,16+(1-life)*40,0,Math.PI*2);ctx.stroke();ctx.globalAlpha=1;
+  }
   const pads=game?.pads||Array.from({length:4},()=>({x:500}));
   pads.forEach((p,i)=>{
     if(game?.solo && game.hp[i]<=0)return;
@@ -1032,16 +1085,20 @@ function render(){
     if(!game || game.hp[3]>0)goalMark(902,500,Math.PI/2,'▲ ЗАБИВАЙ',false);
   }
   const pad=game?.pads[seat];
-  if(pad && pad.perfect>lastPerfect){flashUntil=performance.now()+550;announce('Точный удар!','good');}
+  if(pad && pad.perfect>lastPerfect){flashUntil=performance.now()+550;announce('Точный удар!','good');feedback('perfect');}
   lastPerfect=pad?.perfect||0;
   if(!game)flashUntil=0;
   if(game && (game.goalCount||0)>lastGoalCount){
     lastGoalCount=game.goalCount;
     const own=game.lastGoal.side===seat;
+    goalFlashUntil=frameNow+650;goalFlashOwn=own;feedback('goal');
     announce(own?'Твои ворота · −1':'Гол сопернику! ',own?'bad':'good');
   }
   if(game && game.balls.length>lastBallCount){
-    lastBallCount=game.balls.length;announce('Мультибол · '+lastBallCount+' шара','good');
+    lastBallCount=game.balls.length;announce('Мультибол · '+lastBallCount+' шара','good');feedback('multi');
+  }
+  if(game && !game.paused && frameNow<goalFlashUntil){
+    ctx.globalAlpha=(goalFlashUntil-frameNow)/650;ctx.strokeStyle=goalFlashOwn?'#ff855f':'#8affd5';ctx.lineWidth=18;ctx.strokeRect(9,9,982,982);ctx.globalAlpha=1;
   }
   $('event').classList.toggle('visible',performance.now()<eventUntil && !game?.paused);
   const elapsed=pad?game.t-pad.hit:10;
