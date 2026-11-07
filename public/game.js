@@ -428,15 +428,23 @@ function bannerArea(){
 }
 const bannerVisible=()=>Boolean(game && !game.paused && !document.hidden && !helpDialog.open);
 const inVK=bridge && (bridge.isEmbedded?.() || new URLSearchParams(launch).has('vk_app_id'));
-const bannerController=typeof createBannerController==='function'?createBannerController({sdk:inVK?bridge:null,measure:bannerArea,getMatch:()=>game,isVisible:bannerVisible,onStatus:text=>$('banner-status').textContent=text}):null;
-try{const saved=localStorage.getItem('rikoshet-banner-mode');if(['off','preview','vk'].includes(saved))$('banner-mode').value=saved;}catch{}
+const bannerHistory=[];
+function bannerStatus(text){
+  if(bannerHistory.at(-1)!==text)bannerHistory.push(text);
+  if(bannerHistory.length>6)bannerHistory.shift();
+  $('banner-status').textContent=bannerHistory.join('\n');
+}
+const bannerController=typeof createBannerController==='function'?createBannerController({sdk:inVK?bridge:null,ready:vkInitReady,measure:bannerArea,getMatch:()=>game?game.solo?game:'peer-match':null,isVisible:bannerVisible,onStatus:bannerStatus}):null;
+$('banner-mode').value=inVK?'vk':'off';
+// Earlier versions persisted OFF on every boot, even without a user choice.
+// v2 stores only an explicit choice, so the automatic default can now work.
+try{const saved=localStorage.getItem('rikoshet-banner-choice-v2');if(['off','preview','vk'].includes(saved))$('banner-mode').value=saved;}catch{}
 function changeBannerMode(){
   const mode=$('banner-mode').value;
-  try{localStorage.setItem('rikoshet-banner-mode',mode);}catch{}
   bannerPreviewClosed=null;bannerController?.setMode(mode);
-  if(mode!=='vk')$('banner-status').textContent=mode==='preview'?'Макет включён: начни матч. Реальная реклама не запрашивается.':'Баннер выключен.';
+  if(mode!=='vk')bannerStatus(mode==='preview'?'Макет включён: начни матч. Реальная реклама не запрашивается.':'Баннер выключен.');
 }
-$('banner-mode').onchange=changeBannerMode;
+$('banner-mode').onchange=()=>{try{localStorage.setItem('rikoshet-banner-choice-v2',$('banner-mode').value);}catch{}changeBannerMode();};
 function updateBanner(){
   document.body.classList.toggle('desktop-arena',desktopAds());
   const area=bannerArea(),mode=$('banner-mode').value;

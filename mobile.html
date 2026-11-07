@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="ru"><head><meta charset="utf-8"><meta name="rikoshet-release" content="e55f1ab39b67"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Арена: Рикошет</title><style>
+<html lang="ru"><head><meta charset="utf-8"><meta name="rikoshet-release" content="6019e46cd6a0"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Арена: Рикошет</title><style>
 :root {
   color-scheme: dark;
   font: 15px Arial, sans-serif;
@@ -143,7 +143,7 @@ footer { flex-wrap: wrap; font-size: 11px; min-height: 24px; }
 #banner-preview { position:fixed; bottom:0; left:50%; transform:translateX(-50%); z-index:3; display:flex; flex-direction:column; justify-content:center; align-items:center; gap:8px; padding:16px; border:2px dashed #a5b890; border-radius:8px; background:#1b3028; color:#ebdfbf; text-align:center; }
 #banner-preview.side { left:0; transform:none; }
 #banner-preview button { position:absolute; top:3px; right:3px; min-height:28px; padding:2px 8px; }
-#banner-status { font-size:12px; overflow-wrap:anywhere; }
+#banner-status { font-size:12px; overflow-wrap:anywhere; white-space:pre-line; }
 body.match.desktop-arena .stage { justify-items:end; }
 @media (max-width:740px) and (orientation:portrait) {
   header { padding: 0 10px; }
@@ -327,9 +327,11 @@ const view = new URLSearchParams(launch).get('view') ||
   (location.pathname.endsWith('/mobile.html') ? 'mobile' :
     location.pathname.endsWith('/web.html') ? 'web' : 'auto');
 const bridge = window.vkBridge;
+let vkInitReady=Promise.resolve(false);
 if (bridge && (bridge.isEmbedded() || new URLSearchParams(launch).has('vk_app_id'))) {
-  bridge.send('VKWebAppInit', {}).catch(() => {
+  vkInitReady=bridge.send('VKWebAppInit', {}).then(()=>true).catch(() => {
     console.warn('ВКонтакте не подтвердил запуск.');
+    return false;
   });
   bridge.subscribe(event => {
     if (event.detail.type === 'VKWebAppViewHide' && typeof suspendGame === 'function') {
@@ -873,7 +875,7 @@ return {active,init,host,join,accept,begin,send,pause,decode};
 </script>
 <script>
 // A banner belongs to the platform. Never resize the playfield to accommodate it.
-function createBannerController({sdk,measure,getMatch,isVisible,onStatus=()=>{}}){
+function createBannerController({sdk,measure,getMatch,isVisible,onStatus=()=>{},ready=Promise.resolve(true)}){
   let mode='off',match=null,attempted=false,closed=false,shown=false,busy=false,dimensions=null;
   let failures=0,lastHide=0,lastStatus='';
   const status=text=>{if(text!==lastStatus){lastStatus=text;onStatus(text);}};
@@ -905,6 +907,7 @@ function createBannerController({sdk,measure,getMatch,isVisible,onStatus=()=>{}}
     status('Запрашиваем баннер VK '+(area.side?'слева':'снизу')+'…');
     const timer=setTimeout(()=>status('VK пока не ответил. Игра доступна; повторный запрос не отправляем.'),8000);
     try{
+      if(!await ready){status('VKWebAppInit не подтверждён. Закрой и заново открой игру внутри VK.');return;}
       if(!sdk || !await sdk.supportsAsync('VKWebAppShowBannerAd')){status('Показ баннера недоступен в этом клиенте. Открой игру внутри VK.');return;}
       // No banner_align: it would disable compact height in mobile landscape.
       const options=area.side?{banner_location:'bottom',layout_type:'overlay',banner_align:'left',orientation:'vertical'}:
@@ -912,11 +915,11 @@ function createBannerController({sdk,measure,getMatch,isVisible,onStatus=()=>{}}
       const data=await sdk.send('VKWebAppShowBannerAd',options);
       shown=data?.result===true;dimensions=data;
       if(!shown){status('VK не предоставил рекламу. Игра продолжается без баннера.');return;}
-      status(fits(data)?'VK: баннер '+data.banner_width+' × '+data.banner_height+' пикс.':'Размер баннера не подходит — скрываем.');
+      status(fits(data)?'VK: баннер '+data.banner_width+' × '+data.banner_height+' пикс.':'VK вернул '+data?.banner_width+' × '+data?.banner_height+', '+data?.layout_type+', '+data?.banner_location+'. Не подходит свободной зоне '+Math.floor(measure().gap)+' пикс. — скрываем.');
       if(requestedMatch!==getMatch() || mode!=='vk' || !isVisible() || !fits(data)){
         busy=false;await hide();
       }
-    }catch(error){status('Реклама недоступна'+(Number.isFinite(error?.error_data?.error_code)?' · код VK '+error.error_data.error_code:'')+'. Проверь подключение монетизации в кабинете.');}
+    }catch(error){const reason=String(error?.error_data?.error_reason || error?.message || '').slice(0,240);status('Ошибка показа'+(Number.isFinite(error?.error_data?.error_code)?' · код VK '+error.error_data.error_code:'')+(reason?' · '+reason:'')+'.');}
     finally{clearTimeout(timer);busy=false;}
   }
   function event(event){
@@ -1368,15 +1371,23 @@ function bannerArea(){
 }
 const bannerVisible=()=>Boolean(game && !game.paused && !document.hidden && !helpDialog.open);
 const inVK=bridge && (bridge.isEmbedded?.() || new URLSearchParams(launch).has('vk_app_id'));
-const bannerController=typeof createBannerController==='function'?createBannerController({sdk:inVK?bridge:null,measure:bannerArea,getMatch:()=>game,isVisible:bannerVisible,onStatus:text=>$('banner-status').textContent=text}):null;
-try{const saved=localStorage.getItem('rikoshet-banner-mode');if(['off','preview','vk'].includes(saved))$('banner-mode').value=saved;}catch{}
+const bannerHistory=[];
+function bannerStatus(text){
+  if(bannerHistory.at(-1)!==text)bannerHistory.push(text);
+  if(bannerHistory.length>6)bannerHistory.shift();
+  $('banner-status').textContent=bannerHistory.join('\n');
+}
+const bannerController=typeof createBannerController==='function'?createBannerController({sdk:inVK?bridge:null,ready:vkInitReady,measure:bannerArea,getMatch:()=>game?game.solo?game:'peer-match':null,isVisible:bannerVisible,onStatus:bannerStatus}):null;
+$('banner-mode').value=inVK?'vk':'off';
+// Earlier versions persisted OFF on every boot, even without a user choice.
+// v2 stores only an explicit choice, so the automatic default can now work.
+try{const saved=localStorage.getItem('rikoshet-banner-choice-v2');if(['off','preview','vk'].includes(saved))$('banner-mode').value=saved;}catch{}
 function changeBannerMode(){
   const mode=$('banner-mode').value;
-  try{localStorage.setItem('rikoshet-banner-mode',mode);}catch{}
   bannerPreviewClosed=null;bannerController?.setMode(mode);
-  if(mode!=='vk')$('banner-status').textContent=mode==='preview'?'Макет включён: начни матч. Реальная реклама не запрашивается.':'Баннер выключен.';
+  if(mode!=='vk')bannerStatus(mode==='preview'?'Макет включён: начни матч. Реальная реклама не запрашивается.':'Баннер выключен.');
 }
-$('banner-mode').onchange=changeBannerMode;
+$('banner-mode').onchange=()=>{try{localStorage.setItem('rikoshet-banner-choice-v2',$('banner-mode').value);}catch{}changeBannerMode();};
 function updateBanner(){
   document.body.classList.toggle('desktop-arena',desktopAds());
   const area=bannerArea(),mode=$('banner-mode').value;

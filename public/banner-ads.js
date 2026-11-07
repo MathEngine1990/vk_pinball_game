@@ -1,5 +1,5 @@
 // A banner belongs to the platform. Never resize the playfield to accommodate it.
-export function createBannerController({sdk,measure,getMatch,isVisible,onStatus=()=>{}}){
+export function createBannerController({sdk,measure,getMatch,isVisible,onStatus=()=>{},ready=Promise.resolve(true)}){
   let mode='off',match=null,attempted=false,closed=false,shown=false,busy=false,dimensions=null;
   let failures=0,lastHide=0,lastStatus='';
   const status=text=>{if(text!==lastStatus){lastStatus=text;onStatus(text);}};
@@ -31,6 +31,7 @@ export function createBannerController({sdk,measure,getMatch,isVisible,onStatus=
     status('Запрашиваем баннер VK '+(area.side?'слева':'снизу')+'…');
     const timer=setTimeout(()=>status('VK пока не ответил. Игра доступна; повторный запрос не отправляем.'),8000);
     try{
+      if(!await ready){status('VKWebAppInit не подтверждён. Закрой и заново открой игру внутри VK.');return;}
       if(!sdk || !await sdk.supportsAsync('VKWebAppShowBannerAd')){status('Показ баннера недоступен в этом клиенте. Открой игру внутри VK.');return;}
       // No banner_align: it would disable compact height in mobile landscape.
       const options=area.side?{banner_location:'bottom',layout_type:'overlay',banner_align:'left',orientation:'vertical'}:
@@ -38,11 +39,11 @@ export function createBannerController({sdk,measure,getMatch,isVisible,onStatus=
       const data=await sdk.send('VKWebAppShowBannerAd',options);
       shown=data?.result===true;dimensions=data;
       if(!shown){status('VK не предоставил рекламу. Игра продолжается без баннера.');return;}
-      status(fits(data)?'VK: баннер '+data.banner_width+' × '+data.banner_height+' пикс.':'Размер баннера не подходит — скрываем.');
+      status(fits(data)?'VK: баннер '+data.banner_width+' × '+data.banner_height+' пикс.':'VK вернул '+data?.banner_width+' × '+data?.banner_height+', '+data?.layout_type+', '+data?.banner_location+'. Не подходит свободной зоне '+Math.floor(measure().gap)+' пикс. — скрываем.');
       if(requestedMatch!==getMatch() || mode!=='vk' || !isVisible() || !fits(data)){
         busy=false;await hide();
       }
-    }catch(error){status('Реклама недоступна'+(Number.isFinite(error?.error_data?.error_code)?' · код VK '+error.error_data.error_code:'')+'. Проверь подключение монетизации в кабинете.');}
+    }catch(error){const reason=String(error?.error_data?.error_reason || error?.message || '').slice(0,240);status('Ошибка показа'+(Number.isFinite(error?.error_data?.error_code)?' · код VK '+error.error_data.error_code:'')+(reason?' · '+reason:'')+'.');}
     finally{clearTimeout(timer);busy=false;}
   }
   function event(event){

@@ -31,6 +31,12 @@ test('late show after menu exit is hidden; close by user stops further requests'
   await g.controller.tick();assert.equal(g.calls.length,1);assert.equal(g.controller.getState().closed,true);
 });
 test('failure does not loop and preview never requests ads',async()=>{
-  const f=fixture();f.sdk.send=async()=>{throw Error('no ad');};f.match={};await f.controller.tick();assert.equal(f.controller.getState().attempted,true);assert.match(f.status,/недоступна/);
+  const f=fixture();f.sdk.send=async()=>{throw Error('no ad');};f.match={};await f.controller.tick();assert.equal(f.controller.getState().attempted,true);assert.match(f.status,/no ad/);
   const g=fixture();g.controller.setMode('preview');g.match={};await g.controller.tick();assert.equal(g.calls.length,0);
+});
+test('banner waits for VK initialization before checking support or showing',async()=>{
+  let release;const ready=new Promise(r=>release=r);let calls=0;
+  const controller=createBannerController({ready,sdk:{supportsAsync:async()=>{calls++;return true;},send:async()=>({result:false})},measure:()=>({gap:300,width:390,height:700}),getMatch:()=>1,isVisible:()=>true});
+  controller.setMode('vk');await new Promise(r=>setTimeout(r,0));assert.equal(calls,0);
+  release(true);await new Promise(r=>setTimeout(r,0));assert.equal(calls,1);
 });

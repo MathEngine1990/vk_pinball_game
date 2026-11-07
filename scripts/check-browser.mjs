@@ -215,7 +215,8 @@ try {
     const url=new URL(req.url,'http://localhost');
     if(url.pathname==='/cloud.html'){
       res.setHeader('Content-Type','text/html; charset=utf-8');
-      const mock=`window.vkBridge={isEmbedded:()=>true,subscribe:()=>{},async send(method,args){
+      const mock=`localStorage.setItem('rikoshet-banner-mode','off');window.bannerRequests=0;window.vkBridge={isEmbedded:()=>true,subscribe:()=>{},supportsAsync:async()=>true,async send(method,args){
+        if(method==='VKWebAppShowBannerAd'){window.bannerRequests++;throw {error_data:{error_code:7,error_reason:'test no fill'}};}
         if(window.failCloud && method.startsWith('VKWebAppStorage'))throw Error('offline');
         if(method==='VKWebAppStorageGet')return {keys:[{key:args.keys[0],value:localStorage.getItem('mock-vk-cloud')||''}]};
         if(method==='VKWebAppStorageSet'){localStorage.setItem('mock-vk-cloud',args.value);return {result:true};}
@@ -237,7 +238,11 @@ try {
   assert.ok(await evaluate("events.some(event=>event?.handler==='VKWebAppInit')"),'VK initialization');
   await call('Page.navigate',{url:'http://127.0.0.1:'+server.address().port+'/cloud.html?vk_app_id=123&vk_user_id=42'});await delay(500);
   assert.ok(await evaluate("online && $('save-note').textContent.includes('сохранён в VK')"),'Cloud status');
-  await evaluate("start('solo')");await evaluate('game.hp=[8,0,0,0]');await delay(150);
+  assert.equal(await evaluate("$('banner-mode').value"),'vk','VK automatically enables ads despite legacy off');
+  await evaluate("start('solo')");await delay(700);
+  assert.equal(await evaluate('window.bannerRequests'),1,'Banner requested automatically during VK match');
+  await evaluate('game.hp=[8,0,0,0]');await delay(400);
+  assert.ok(await evaluate("$('banner-status').textContent.includes('test no fill')"),'Error remains visible after returning to menu');
   assert.equal(await evaluate('JSON.parse(localStorage.getItem("mock-vk-cloud")).profile.wave'),2);
   await evaluate("localStorage.removeItem('rikoshet-vk-123-42')");
   await call('Page.reload');await delay(400);
