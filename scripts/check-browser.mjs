@@ -63,9 +63,11 @@ try {
     await delay(500);
     assert.equal(await evaluate("scheme.value"),entry==='web'?'direct':'thumb');
     const initialWave=await evaluate('profile.wave');
+    assert.ok(await evaluate("$('wave-title').textContent.includes(waveRules(profile.wave).name)"),'Wave preview matches saved progression');
     await evaluate("$('solo').click()");
     await delay(100);
     assert.equal(await evaluate('game.wave'),initialWave);
+    assert.deepEqual(await evaluate('game.rules.bumpers'),await evaluate('waveRules(profile.wave).bumpers'));
     for(const [width,height] of [[320,568],[568,320],[390,844],[844,390],[720,720],[1280,720]]){
       await resize(width,height);
       assert.ok(await evaluate(`[table,cabinet,$('hit'),$('pause')].every(element=>{
@@ -108,6 +110,7 @@ try {
     await call('Page.reload');
     await delay(350);
     assert.equal(await evaluate('profile.wave'),initialWave+1,'Saved progression after reload');
+    assert.ok(await evaluate("$('wave-title').textContent.includes(waveRules(profile.wave).name)"),'Preview advances after victory');
     await evaluate("$('solo').click();$('settings').open=true;scheme.value='thumb';scheme.onchange();sensitivity.value='2';sensitivity.oninput()");
     await resize(568,320);
     await screenshot(entry+'-landscape');

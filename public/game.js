@@ -16,6 +16,9 @@ function progress(p){
   while(xp>=cost){xp-=cost;l++;cost=70+18*(l-1)+2*(l-1)**2;}
   $('stats').textContent='Уровень '+l+' · Опыт '+xp+'/'+cost+' · Осколки '+p.shards;
   $('solo').firstChild.textContent='Волна '+p.wave+' · играть ';
+  const rules=waveRules(p.wave);
+  $('wave-title').textContent=rules.name+' · Цикл '+rules.cycle;
+  $('wave-description').textContent=rules.description;
 }
 $('solo').onclick=e=>{e.currentTarget.blur();start('solo');};
 $('create').onclick=e=>{e.currentTarget.blur();start('create');};
@@ -166,14 +169,22 @@ a.strokeStyle='#bbd6ae60';a.lineWidth=3;a.strokeRect(22,22,956,956);
 for(let i=0;i<4;i++){a.save();a.translate(500,500);a.rotate(Math.PI*i/2);a.beginPath();a.moveTo(-470,-220);a.lineTo(-470,-370);a.lineTo(-370,-470);a.lineTo(-220,-470);a.stroke();a.restore();}
 a.beginPath();a.arc(500,500,176,0,Math.PI*2);a.stroke();a.beginPath();a.arc(500,500,162,0,Math.PI*2);a.stroke();
 a.save();a.translate(500,500);a.rotate(-.24);a.textAlign='center';a.fillStyle='#d4d3a46b';a.font='italic 900 75px Arial';a.fillText('АРЕНА',0,17);a.font='bold 26px monospace';a.fillText('Р И К О Ш Е Т',0,58);a.restore();
-for(const x of [310,690])for(const y of [310,690]){
-  disc(a,x,y+10,50,[[0,'#647569'],[.8,'#283730'],[1,'#0d211a']]);
-  disc(a,x,y,46,[[0,'#fff5c2'],[.43,'#ffc37c'],[.66,'#e9844b'],[.72,'#ffce84'],[.83,'#91432c'],[.94,'#ffc89b'],[1,'#463f31']]);
-  a.fillStyle='#783d27';a.font='bold 27px Arial';a.textAlign='center';a.fillText('✦',x,y+8);
+const arenaCache=new Map();
+function arenaArt(layout){
+  const key=JSON.stringify(layout);
+  if(arenaCache.has(key))return arenaCache.get(key);
+  const canvas=document.createElement('canvas');canvas.width=canvas.height=1000;
+  const paint=canvas.getContext('2d');paint.drawImage(art,0,0);
+  for(const [x,y] of layout){
+    disc(paint,x,y+10,50,[[0,'#647569'],[.8,'#283730'],[1,'#0d211a']]);
+    disc(paint,x,y,46,[[0,'#fff5c2'],[.43,'#ffc37c'],[.66,'#e9844b'],[.72,'#ffce84'],[.83,'#91432c'],[.94,'#ffc89b'],[1,'#463f31']]);
+    paint.fillStyle='#783d27';paint.font='bold 27px Arial';paint.textAlign='center';paint.fillText('✦',x,y+8);
+  }
+  arenaCache.set(key,canvas);return canvas;
 }
 function render(){
   ctx.save();if(seat===1 && game){ctx.translate(1000,1000);ctx.rotate(Math.PI);}
-  ctx.drawImage(art,0,0);
+  ctx.drawImage(arenaArt(game ? game.rules?.bumpers || bumpers : waveRules(profile?.wave).bumpers),0,0);
   const pads=game?.pads||Array.from({length:4},()=>({x:500}));
   pads.forEach((p,i)=>{
     if(game?.solo && game.hp[i]<=0)return;

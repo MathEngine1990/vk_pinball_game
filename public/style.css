@@ -177,3 +177,7 @@ footer { flex-wrap: wrap; font-size: 11px; min-height: 24px; }
   footer { font-size: 10px; }
   .cabinet { box-shadow: none; }
 }
+#wave-preview { grid-column: 1 / -1; padding: 10px; border: 1px solid #739f7d55; border-radius: 8px; background: #18372c; }
+#wave-preview b { color: #ffd29d; }
+#wave-preview p { margin: 5px 0; font-size: 13px; }
+#wave-preview small { display: block; font-size: 11px; line-height: 1.35; color: #bdcfc2; }

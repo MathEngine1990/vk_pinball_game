@@ -16,6 +16,7 @@ const files=new Map(Object.entries({'/':['public/index.html','text/html'],'/game
 for(const entry of ['/web.html','/mobile.html','/index.html'])files.set(entry,files.get('/'));
 files.set('/platform.js',['public/platform.js','text/javascript']);
 files.set('/session.js',['public/network-session.js','text/javascript']);
+files.set('/physics-client.js',['physics.js','text/javascript']);
 const server=http.createServer((req,res)=>{
   res.setHeader('Referrer-Policy','no-referrer');
   res.setHeader('X-Content-Type-Options','nosniff');
@@ -24,9 +25,10 @@ const server=http.createServer((req,res)=>{
   if(!file){res.writeHead(404).end();return;}
   res.setHeader('Content-Type',file[1]+'; charset=utf-8');
   let content=readFileSync(new URL(file[0],import.meta.url),'utf8');
+  if(file[0]==='physics.js')content=content.replace(/^export /gm,'');
   if(file[1]==='text/html'){
     content=content.replace('<!-- GAME_SCRIPTS -->',
-      '<script src="/bridge.js"></script><script src="/platform.js"></script><script src="/session.js"></script><script src="/game.js"></script>');
+      '<script src="/bridge.js"></script><script src="/platform.js"></script><script src="/physics-client.js"></script><script src="/session.js"></script><script src="/game.js"></script>');
   }
   res.end(content);
 });

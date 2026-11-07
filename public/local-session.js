@@ -53,14 +53,13 @@ function pauseSession(paused) {
 
 function start(type) {
   if (type !== 'solo' || game) return;
-  profile = loadLocal();
   game = arena(true, profile.wave);
   target = 500;
   resetInput();
   resetFeedback();
   controls(true);
   $('hint').textContent = 'Защищай оранжевые ворота внизу. Забивай в три бирюзовых.';
-  $('mode').textContent = 'ВОЛНА ' + game.wave;
+  $('mode').textContent = 'ВОЛНА ' + game.wave + ' · ' + game.rules.name;
   $('solo').blur();
 }
 

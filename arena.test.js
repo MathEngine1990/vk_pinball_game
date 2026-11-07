@@ -4,7 +4,25 @@ import {spawn} from 'node:child_process';
 import {once} from 'node:events';
 import {createHmac} from 'node:crypto';
 import {WebSocket} from 'ws';
-import {arena,step,input,rewards} from './physics.js';
+import {arena,step,input,rewards,waveRules,bumpers} from './physics.js';
+
+test('wave variants have matching geometry, schedules and bounded difficulty',()=>{
+  for(const invalid of [0,-1,NaN,Infinity,'2'])assert.deepEqual(waveRules(invalid),waveRules(1));
+  assert.deepEqual(waveRules(1).bumpers,bumpers);
+  assert.notDeepEqual(waveRules(2).bumpers,bumpers);
+  for(const wave of [1,2,3,4,1000000]){
+    const g=arena(true,wave), rules=waveRules(wave);
+    assert.ok(rules.speed<=480 && rules.botSpeed<=480 && rules.botReaction>=.1);
+    assert.ok(Math.abs(Math.hypot(g.balls[0].vx,g.balls[0].vy)-rules.speed)<1e-8);
+    for(const [index,time] of rules.ballsAt.entries()){
+      g.t=time-.02;step(g,.01);assert.equal(g.balls.length,index+1);
+      step(g,.02);assert.equal(g.balls.length,index+2);
+    }
+  }
+  const g=arena(true,2);g.balls=[{x:500,y:330,vx:0,vy:-360}];
+  step(g,1/60);assert.ok(g.balls[0].vy>0,'Diamond bumper reflects the ball at its visible position');
+  assert.equal(arena(false,1000000).rules,null,'Progression never changes PvP rules');
+});
 
 test('pause freezes physics and rejects controls until resumed',()=>{
   const g=arena(true);
