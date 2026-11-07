@@ -62,6 +62,7 @@ try {
     await call('Page.navigate',{url:pathToFileURL(path.resolve('Релиз для GitHub Pages/'+entry+'.html')).href});
     await delay(500);
     assert.equal(await evaluate("scheme.value"),entry==='web'?'direct':'thumb');
+    assert.ok(await evaluate("$('online-menu').hidden && $('create').hidden && $('join').hidden"),'Solo release has no unavailable online actions');
     const initialWave=await evaluate('profile.wave');
     assert.ok(await evaluate("$('wave-title').textContent.includes(waveRules(profile.wave).name)"),'Wave preview matches saved progression');
     await evaluate("$('solo').click()");
@@ -118,6 +119,20 @@ try {
     assert.ok(await evaluate('pointer===null && hit===false'));
     console.log(entry+': layout, pause, controls, reward and save OK');
   }
+  await evaluate("endLocal(false);localStorage.setItem('rikoshet-local-v1',JSON.stringify({...profile,shards:600,owned:['amber'],skin:'amber'}))");
+  await call('Page.reload');await delay(400);
+  await evaluate("$('shop').open=true;$('shop-items').children[1].click()");
+  assert.ok(await evaluate("!$('purchase-confirm').hidden && profile.shards===600"),'Purchase requires confirmation');
+  await evaluate("$('purchase-no').click()");
+  assert.equal(await evaluate('profile.shards'),600);
+  await evaluate("$('shop-items').children[1].click();$('purchase-yes').click()");await delay(100);
+  assert.equal(await evaluate('profile.shards'),300);
+  await evaluate("send({type:'buy',skin:'ice'})");await delay(100);
+  assert.equal(await evaluate('profile.shards'),300,'Owned skin never charges twice');
+  await call('Page.reload');await delay(400);
+  assert.equal(await evaluate('profile.skin'),'ice');
+  await evaluate("$('shop').open=true");await resize(390,844);await screenshot('solo-shop');
+  console.log('Cosmetic purchase confirmation, balance and persistence OK');
   networkServer=spawn(process.execPath,['server.js'],{
     env:{...process.env,PORT:'0',DB_PATH:':memory:',NODE_ENV:'test',VK_APP_ID:'',VK_SECRET:'',PUBLIC_ORIGIN:''},
     windowsHide:true,stdio:['ignore','pipe','pipe']
@@ -143,6 +158,15 @@ try {
   console.log('Network client and authoritative pause OK');
   server=createServer(async(req,res)=>{
     const url=new URL(req.url,'http://localhost');
+    if(url.pathname==='/cloud.html'){
+      res.setHeader('Content-Type','text/html; charset=utf-8');
+      const mock=`window.vkBridge={isEmbedded:()=>true,subscribe:()=>{},async send(method,args){
+        if(window.failCloud && method.startsWith('VKWebAppStorage'))throw Error('offline');
+        if(method==='VKWebAppStorageGet')return {keys:[{key:args.keys[0],value:localStorage.getItem('mock-vk-cloud')||''}]};
+        if(method==='VKWebAppStorageSet'){localStorage.setItem('mock-vk-cloud',args.value);return {result:true};}
+        return {result:true};}};`;
+      res.end((await fs.readFile('Релиз для GitHub Pages/mobile.html','utf8')).replace('const launch = location.search;',mock+'\nconst launch = location.search;'));return;
+    }
     if(url.pathname==='/'){
       res.setHeader('Content-Type','text/html');
       res.end('<script>window.events=[];onmessage=e=>events.push(e.data);</script><iframe src="/mobile.html?vk_app_id=123&vk_platform=desktop_web" style="width:390px;height:750px"></iframe>');
@@ -156,6 +180,19 @@ try {
   await call('Page.navigate',{url:'http://127.0.0.1:'+server.address().port+'/'});
   await delay(500);
   assert.ok(await evaluate("events.some(event=>event?.handler==='VKWebAppInit')"),'VK initialization');
+  await call('Page.navigate',{url:'http://127.0.0.1:'+server.address().port+'/cloud.html?vk_app_id=123&vk_user_id=42'});await delay(500);
+  assert.ok(await evaluate("online && $('save-note').textContent.includes('сохранён в VK')"),'Cloud status');
+  await evaluate("start('solo')");await evaluate('game.hp=[8,0,0,0]');await delay(150);
+  assert.equal(await evaluate('JSON.parse(localStorage.getItem("mock-vk-cloud")).profile.wave'),2);
+  await evaluate("localStorage.removeItem('rikoshet-vk-123-42')");
+  await call('Page.reload');await delay(400);
+  assert.equal(await evaluate('profile.wave'),2,'Cloud restores without the device cache');
+  await evaluate("window.failCloud=true;start('solo')");await delay(100);
+  await evaluate('game.hp=[8,0,0,0]');await delay(150);
+  assert.ok(await evaluate("!$('sync-save').hidden && profile.wave===3"),'Offline progress has retry');
+  await evaluate("window.failCloud=false;$('sync-save').click()");await delay(150);
+  assert.equal(await evaluate('JSON.parse(localStorage.getItem("mock-vk-cloud")).profile.wave'),3);
+  await screenshot('vk-save');
   assert.ok(errors.length===0,JSON.stringify(errors));
   console.log('VK init and browser exception checks OK');
 } finally {

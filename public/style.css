@@ -181,3 +181,11 @@ footer { flex-wrap: wrap; font-size: 11px; min-height: 24px; }
 #wave-preview b { color: #ffd29d; }
 #wave-preview p { margin: 5px 0; font-size: 13px; }
 #wave-preview small { display: block; font-size: 11px; line-height: 1.35; color: #bdcfc2; }
+#online-menu { margin-top: 7px; }
+#find { width: 100%; }
+#queue-status { padding: 12px; border: 1px solid #79bba1; border-radius: 8px; }
+#shop-items { display: grid; gap: 5px; }
+#shop p, #rank-list { font-size: 12px; }
+#purchase-confirm button { margin: 6px 4px 0 0; }
+.stats button { font-size: 12px; width: 100%; margin-top: 5px; }
+#save-conflict { padding: 8px; border: 1px solid #ffc08a; border-radius: 7px; }

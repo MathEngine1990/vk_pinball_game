@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="ru"><head><meta charset="utf-8"><meta name="rikoshet-release" content="3ca28c3e95fa"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Арена: Рикошет</title><style>
+<html lang="ru"><head><meta charset="utf-8"><meta name="rikoshet-release" content="52b86ccc7ff0"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Арена: Рикошет</title><style>
 :root {
   color-scheme: dark;
   font: 15px Arial, sans-serif;
@@ -183,6 +183,14 @@ footer { flex-wrap: wrap; font-size: 11px; min-height: 24px; }
 #wave-preview b { color: #ffd29d; }
 #wave-preview p { margin: 5px 0; font-size: 13px; }
 #wave-preview small { display: block; font-size: 11px; line-height: 1.35; color: #bdcfc2; }
+#online-menu { margin-top: 7px; }
+#find { width: 100%; }
+#queue-status { padding: 12px; border: 1px solid #79bba1; border-radius: 8px; }
+#shop-items { display: grid; gap: 5px; }
+#shop p, #rank-list { font-size: 12px; }
+#purchase-confirm button { margin: 6px 4px 0 0; }
+.stats button { font-size: 12px; width: 100%; margin-top: 5px; }
+#save-conflict { padding: 8px; border: 1px solid #ffc08a; border-radius: 7px; }
 
 </style></head>
 <body><header><b><i>◉</i> АРЕНА: РИКОШЕТ</b><span id="account">Подключение…</span></header>
@@ -190,12 +198,15 @@ footer { flex-wrap: wrap; font-size: 11px; min-height: 24px; }
 <p id="hint" role="status">Защищайте свои ворота. Направляйте шар краем отражателя.</p>
 <div id="menu"><section id="wave-preview"><b id="wave-title"></b><p id="wave-description"></p><small>Защити свои ворота. Победи всех или сохрани больше прочности за 150 секунд. Ничья — в твою пользу.</small></section><button id="solo">Продолжить волну <strong>↗</strong></button><button id="create">Создать дуэль <strong>＋</strong></button><form id="join"><input id="code" maxlength="8" placeholder="Код комнаты" aria-label="Код комнаты" required><button>Войти</button></form></div>
 <section id="result" hidden aria-live="polite"><b id="result-title"></b><p id="result-reward"></p></section>
+<section id="online-menu"><button id="find">Найти соперника</button><details id="ranking"><summary>Рейтинг игроков</summary><button id="refresh-ranking">Обновить рейтинг</button><div id="rank-list">Рейтинговые матчи учитываются после поиска соперника. Дуэли с друзьями не меняют рейтинг.</div></details></section>
+<section id="queue-status" hidden role="status"><b>Поиск соперника…</b><p>Чем дольше поиск, тем шире диапазон рейтинга.</p><button id="cancel-search">Отменить поиск</button></section>
+<details id="shop"><summary>Оформление отражателя</summary><p>Только внешний вид. Скорость, размер и сила удара одинаковые.</p><div id="shop-items"></div><p id="purchase-confirm" hidden><span id="purchase-text"></span><button id="purchase-yes">Купить</button><button id="purchase-no">Отмена</button></p></details>
 <div id="playing" hidden><button id="hit"><span id="hit-label">✦ Удар готов</span><span id="hit-meter"></span></button><button id="pause">Пауза</button><button id="leave">Выйти</button></div>
 <details id="settings"><summary>Управление и чувствительность</summary>
 <label class="scheme">Управление <select id="scheme"><option value="thumb">Одним пальцем</option><option value="direct">По позиции</option></select></label>
 <label class="scheme" id="sensitivity-row">Чувствительность <input id="sensitivity" type="range" min="0.7" max="2.2" step="0.1" value="1.4"><output id="sensitivity-value">1,4</output></label></details>
 <p id="gesture"></p>
-<div class="stats"><span id="stats">—</span><small id="save-note"></small></div></section>
+<div class="stats"><span id="stats">—</span><small id="save-note" role="status"></small><button id="sync-save" hidden>Повторить синхронизацию</button><button id="import-save" hidden>Перенести старый прогресс с устройства в VK</button><section id="save-conflict" hidden><p id="save-conflict-text"></p><button id="use-cloud">Продолжить сохранение VK</button><button id="use-local">Заменить сохранение VK этим</button></section></div></section>
 <div class="stage"><section class="cabinet"><div class="plate"><b>АРЕНА <em>/</em> РИКОШЕТ</b><span id="mode">ТРЕНИРОВОЧНАЯ АРЕНА</span></div>
 <div class="board"><canvas id="table" width="1000" height="1000" aria-label="Поле пинбола. Твои оранжевые ворота внизу. Бирюзовые ворота — цели."></canvas><div id="pause-screen" hidden><b id="pause-title">Пауза</b><span id="pause-text">Волна продолжится по нажатию</span><button id="resume">Продолжить</button><button id="quit" hidden>Завершить волну</button></div><div id="event" aria-live="polite"></div></div>
 <footer><b id="hud">ВОЛНА 01</b><span id="power"></span></footer><div id="touchpad" hidden aria-label="Площадка управления одним пальцем">⇆ Веди пальцем · отпусти для удара</div></section></div></main><script>
@@ -375,104 +386,191 @@ function rewards(game, seat) {
 
 </script>
 <script>
-const saveKey = 'rikoshet-local-v1';
-let saveAvailable = true;
+const cosmetics = [
+  {id:'amber',name:'Янтарь',price:0,color:'#ffbb71',shade:'#db6837'},
+  {id:'ice',name:'Северное сияние',price:300,color:'#8bcfff',shade:'#4468d5'},
+  {id:'rose',name:'Неоновая роза',price:600,color:'#ffa7d6',shade:'#b34b94'},
+  {id:'gold',name:'Солнечный металл',price:1200,color:'#ffe99b',shade:'#a98532'}
+];
+function ratingDelta(rating,opponent,won){
+  return Math.round(32*((won?1:0)-1/(1+10**((opponent-rating)/400))));
+}
 
-function loadLocal() {
-  const fresh = {wave: 1, xp: 0, shards: 0, mmr: 1000};
-  try {
-    const stored = JSON.parse(localStorage.getItem(saveKey));
-    if (stored && ['wave', 'xp', 'shards'].every(key =>
-      Number.isSafeInteger(stored[key]) && stored[key] >= 0) && stored.wave > 0) {
-      return {...fresh, wave: stored.wave, xp: stored.xp, shards: stored.shards};
-    }
-  } catch {
-    saveAvailable = false;
+</script>
+<script>
+// VK Storage is for solo progress, not authoritative currency or ranked results.
+function cleanSoloProfile(value){
+  if(!value || !['wave','xp','shards'].every(key=>Number.isSafeInteger(value[key]) && value[key]>=0 && value[key]<=1e9) || value.wave<1)return null;
+  const owned=['amber',...['ice','rose','gold'].filter(id=>Array.isArray(value.owned) && value.owned.includes(id))];
+  return {wave:value.wave,xp:value.xp,shards:value.shards,mmr:1000,owned,skin:owned.includes(value.skin)?value.skin:'amber'};
+}
+function createSoloStore({storage,bridge,account='',onStatus=()=>{},timeoutMs=4500,makeId=()=>Array.from(crypto.getRandomValues(new Uint8Array(16)),n=>n.toString(16).padStart(2,'0')).join('')}){
+  const cloudKey='rikoshet_solo_v2';
+  const key=account?'rikoshet-vk-'+account:'rikoshet-local-v1';
+  const fresh=()=>({wave:1,xp:0,shards:0,mmr:1000,owned:['amber'],skin:'amber'});
+  let state={profile:fresh(),base:null,pending:null,dirty:false},localOK=true,conflict=null,busy=null;
+  let cloudKnown=false;
+  const clone=value=>JSON.parse(JSON.stringify(value));
+  const readLocal=name=>{try{return JSON.parse(storage.getItem(name));}catch{return null;}};
+  const cached=readLocal(key);
+  if(account && cleanSoloProfile(cached?.profile))state={profile:cleanSoloProfile(cached.profile),base:typeof cached.base==='string'?cached.base:null,pending:typeof cached.pending==='string'?cached.pending:null,dirty:cached.dirty===true};
+  else if(!account && cleanSoloProfile(cached))state.profile=cleanSoloProfile(cached);
+  function persist(){try{storage.setItem(key,JSON.stringify(account?state:state.profile));localOK=true;}catch{localOK=false;}return localOK;}
+  function status(kind){onStatus({kind,localOK,cloud:Boolean(account),dirty:state.dirty,conflict:conflict?clone(conflict.profile):null,
+    canImport:Boolean(account && cloudKnown && !state.base && !state.dirty && cleanSoloProfile(readLocal('rikoshet-local-v1'))),profile:clone(state.profile)});}
+  async function call(method,args){
+    let timer;
+    try{return await Promise.race([Promise.resolve().then(()=>bridge.send(method,args)),new Promise((_,reject)=>{timer=setTimeout(()=>reject(Error('timeout')),timeoutMs);})]);}
+    finally{clearTimeout(timer);}
   }
-  return fresh;
-}
-
-function endLocal(finished) {
-  if (!game) return;
-  const won = finished && game.winner === 0;
-  const reward = finished ? rewards(game, 0) : {xp: 0, shards: 0, wave: 0};
-  const wave = game.wave;
-  profile.xp += reward.xp;
-  profile.shards += reward.shards;
-  profile.wave += reward.wave;
-  if (finished) {
-    try {
-      localStorage.setItem(saveKey, JSON.stringify(profile));
-      saveAvailable = true;
-    } catch {
-      saveAvailable = false;
-    }
+  async function remote(){
+    const result=await call('VKWebAppStorageGet',{keys:[cloudKey]});
+    if(!Array.isArray(result?.keys))throw Error('invalid response');
+    const value=result.keys.find(item=>item.key===cloudKey)?.value;
+    if(value===undefined)throw Error('missing key');
+    if(value==='')return {profile:fresh(),revision:null};
+    const data=JSON.parse(value),profile=cleanSoloProfile(data?.profile);
+    if(data?.v!==1 || typeof data.revision!=='string' || !data.revision || !profile)throw Error('invalid save');
+    return {profile,revision:data.revision};
   }
-  game = null;
-  resetInput();
-  controls(false);
-  progress(profile);
-  showResult({won, reward: finished, earned: reward, wave, saved: saveAvailable});
+  function sync(){
+    if(!account){persist();status('local');return Promise.resolve(clone(state.profile));}
+    if(busy)return busy;
+    busy=(async()=>{
+      status('syncing');
+      try{
+        let latest=await remote();cloudKnown=true;
+        if(state.dirty && latest.revision===state.pending){state.base=latest.revision;state.dirty=false;state.pending=null;}
+        if(state.dirty && latest.revision!==state.base){conflict=latest;persist();status('conflict');return clone(state.profile);}
+        if(!state.dirty){state.profile=latest.profile;state.base=latest.revision;conflict=null;persist();status('saved');return clone(state.profile);}
+        const revision=state.pending,profile=clone(state.profile);
+        const result=await call('VKWebAppStorageSet',{key:cloudKey,value:JSON.stringify({v:1,revision,profile})});
+        if(result?.result!==true)throw Error('save rejected');
+        // Do not mark newer local changes as synchronized with an older write.
+        state.base=revision;
+        if(state.pending===revision){state.dirty=false;state.pending=null;}
+        conflict=null;persist();status(state.dirty?'pending':'saved');
+      }catch{persist();status('unavailable');}
+      return clone(state.profile);
+    })().finally(()=>{busy=null;});
+    return busy;
+  }
+  function save(profile){
+    const clean=cleanSoloProfile(profile);if(!clean)throw Error('invalid profile');
+    state.profile=clean;
+    if(account){state.dirty=true;state.pending=makeId();}
+    persist();status(account?'pending':'local');
+    // Callers sync at safe menu boundaries; gameplay never waits for a network call.
+    return localOK;
+  }
+  async function resolve(choice){
+    if(busy)await busy;
+    if(!conflict)return sync();
+    // Both choices retain an on-device recovery copy of the version being replaced.
+    try{storage.setItem(key+'-recovery',JSON.stringify({local:state,remote:conflict}));}catch{status('unavailable');return clone(state.profile);}
+    if(choice==='cloud'){state={profile:clone(conflict.profile),base:conflict.revision,pending:null,dirty:false};conflict=null;persist();status('saved');return clone(state.profile);}
+    if(choice==='local'){state.base=conflict.revision;conflict=null;return sync();}
+    return clone(state.profile);
+  }
+  async function importLocal(){
+    if(busy)await busy;
+    const old=cleanSoloProfile(readLocal('rikoshet-local-v1'));
+    if(!account || !cloudKnown || state.base || state.dirty || !old)return clone(state.profile);
+    save(old);return sync();
+  }
+  return {load:sync,sync,save,resolve,importLocal,get:()=>clone(state.profile)};
 }
 
-function send(message) {
-  if (!game) return;
-  if (message.type === 'input') input(game, 0, message.x, message.hit);
-  if (message.type === 'leave') endLocal(false);
+</script>
+<script>
+const localSession=(()=>{
+let store,saving=false,saveStatus;
+function showSaveStatus(status){
+  saveStatus=status;
+  const messages={local:status.localOK?'Прогресс хранится на этом устройстве.':'Сохранение недоступно. Прогресс доступен до закрытия игры.',
+    syncing:'Синхронизация с VK…',saved:'Прогресс сохранён в VK. Можно продолжить на другом устройстве.',
+    pending:'Изменения ожидают сохранения в VK.',unavailable:status.localOK?'VK пока не подтвердил сохранение. Копия есть на устройстве.':'VK и сохранение на устройстве недоступны. Не закрывай игру до повторной синхронизации.',
+    conflict:'Найдены разные сохранения. Выбери, какое продолжить.'};
+  $('save-note').textContent=messages[status.kind];
+  $('sync-save').hidden=!status.cloud || !['pending','unavailable'].includes(status.kind);
+  $('import-save').hidden=!status.canImport;
+  $('save-conflict').hidden=status.kind!=='conflict';
+  if(status.conflict)$('save-conflict-text').textContent='На устройстве: волна '+status.profile.wave+', '+status.profile.shards+' осколков. В VK: волна '+status.conflict.wave+', '+status.conflict.shards+' осколков. Замена перенесёт всю выбранную версию.';
 }
-
-function pauseSession(paused) {
-  if (!game) return;
-  game.paused = paused;
-  resetInput();
-  updatePause();
+async function synchronize(action='sync'){
+  if(saving || game)return;
+  saving=true;online=false;controls(false);renderShop();
+  for(const id of ['sync-save','import-save','use-cloud','use-local'])$(id).disabled=true;
+  try{
+    const saved=action==='import'?await store.importLocal():['cloud','local'].includes(action)?await store.resolve(action):await store.sync();
+    progress(saved);
+  }finally{
+    saving=false;online=true;controls(false);renderShop();
+    for(const id of ['sync-save','import-save','use-cloud','use-local'])$(id).disabled=false;
+  }
 }
-
-function start(type) {
-  if (type !== 'solo' || game) return;
-  game = arena(true, profile.wave);
-  target = 500;
-  resetInput();
-  resetFeedback();
-  controls(true);
-  $('hint').textContent = 'Защищай оранжевые ворота внизу. Забивай в три бирюзовых.';
-  $('mode').textContent = 'ВОЛНА ' + game.wave + ' · ' + game.rules.name;
-  $('solo').blur();
+function endLocal(finished){
+  if(!game)return;
+  const won=finished && game.winner===0;
+  const earned=finished?rewards(game,0):{xp:0,shards:0,wave:0};
+  const wave=game.wave;
+  profile.xp+=earned.xp;profile.shards+=earned.shards;profile.wave+=earned.wave;
+  if(finished)store.save(profile);
+  game=null;resetInput();controls(false);progress(profile);
+  showResult({won,reward:finished,earned,wave});
+  if(saveStatus)showSaveStatus(saveStatus);
+  if(finished)void synchronize();
 }
-
-function connect() {
-  online = true;
-  profile = loadLocal();
-  progress(profile);
-  controls(false);
-  $('account').textContent = 'Одиночная игра';
-  $('join').hidden = true;
-  $('create').hidden = true;
-  $('hint').textContent = 'Защити свои ворота и обыграй трёх ботов.';
-  $('save-note').textContent = saveAvailable ?
-    'Прогресс хранится на этом устройстве.' :
-    'Сохранение недоступно. Прогресс сохранится только до закрытия игры.';
-
-  let previous = performance.now();
-  let accumulated = 0;
-  function simulate(now) {
-    const elapsed = Math.min(0.1, (now - previous) / 1000);
-    previous = now;
-    if (!game || game.paused || document.hidden) {
-      accumulated = 0;
-    } else {
-      accumulated += elapsed;
-      while (accumulated >= 1 / 60 && game) {
-        accumulated -= 1 / 60;
-        step(game, 1 / 60);
-        if (game.winner !== null) endLocal(true);
-      }
-    }
+function send(message){
+  if(!game && !saving && ['buy','equip'].includes(message.type)){
+    const item=cosmetics.find(item=>item.id===message.skin);if(!item)return;
+    const owned=profile.owned.includes(item.id);
+    if(!owned && (message.type==='equip' || profile.shards<item.price)){$('hint').textContent='Недостаточно осколков';return;}
+    if(!owned){profile.shards-=item.price;profile.owned.push(item.id);}
+    profile.skin=item.id;store.save(profile);progress(profile);void synchronize();return;
+  }
+  if(!game)return;
+  if(message.type==='input')input(game,0,message.x,message.hit);
+  if(message.type==='leave')endLocal(false);
+}
+function pauseSession(paused){if(game){game.paused=paused;resetInput();updatePause();}}
+async function start(type){
+  if(type!=='solo' || game || saving || !online)return;
+  await synchronize();
+  if(saveStatus?.kind==='conflict'){$('hint').textContent='Выбери сохранение внизу меню, затем начни волну.';return;}
+  game=arena(true,profile.wave);game.skins=[profile.skin];target=500;
+  resetInput();resetFeedback();controls(true);
+  $('hint').textContent='Защищай оранжевые ворота внизу. Забивай в три бирюзовых.';
+  $('mode').textContent='ВОЛНА '+game.wave+' · '+game.rules.name;$('solo').blur();
+}
+async function connect(){
+  const params=new URLSearchParams(launch);
+  const app=params.get('vk_app_id'),user=params.get('vk_user_id');
+  const account=bridge && /^\d+$/.test(app||'') && /^\d+$/.test(user||'')?app+'-'+user:'';
+  let storage;try{storage=localStorage;}catch{storage={getItem:()=>null,setItem:()=>{throw Error('storage unavailable');}};}
+  store=createSoloStore({storage,bridge,account,onStatus:showSaveStatus});
+  online=false;profile=store.get();progress(profile);controls(false);
+  $('account').textContent=account?'Одиночная игра · VK':'Одиночная игра';
+  for(const id of ['join','create','find','ranking'])$(id).hidden=true;
+  $('sync-save').onclick=()=>synchronize();$('import-save').onclick=()=>synchronize('import');
+  $('use-cloud').onclick=()=>synchronize('cloud');$('use-local').onclick=()=>synchronize('local');
+  $('hint').textContent='Защити свои ворота и обыграй трёх ботов.';
+  await synchronize();
+  let previous=performance.now(),accumulated=0;
+  function simulate(now){
+    const elapsed=Math.min(.1,(now-previous)/1000);previous=now;
+    if(!game || game.paused || document.hidden)accumulated=0;
+    else{accumulated+=elapsed;while(accumulated>=1/60 && game){accumulated-=1/60;step(game,1/60);if(game.winner!==null)endLocal(true);}}
     requestAnimationFrame(simulate);
   }
   requestAnimationFrame(simulate);
 }
+return {send,start,connect,pauseSession,endLocal};
+})();
 
+</script>
+<script>
+const networkMode=false; const {send,start,connect,pauseSession,endLocal}=localSession;
 </script>
 <script>
 const $=id=>document.getElementById(id);
@@ -481,6 +579,8 @@ let game=null,seat=0,target=500,hit=false,profile,online=false,inRoom=false,adsE
 let networkWaiting=false,confirmExit=false;
 function controls(active){
   inRoom=active;$('menu').hidden=active;$('playing').hidden=!active;
+  $('online-menu').hidden=active || !networkMode;$('shop').hidden=active;
+  $('find').disabled=!online;
   $('hit').disabled=!game;document.body.classList.toggle('match',active);
   if(active)$('result').hidden=true;
   $('pause').hidden=!game?.solo;
@@ -496,6 +596,32 @@ function progress(p){
   const rules=waveRules(p.wave);
   $('wave-title').textContent=rules.name+' · Цикл '+rules.cycle;
   $('wave-description').textContent=rules.description;
+  if(networkMode)$('stats').textContent+=' · Рейтинг '+p.mmr;
+  renderShop();
+}
+let pendingSkin=null;
+function renderShop(){
+  const list=$('shop-items');list.replaceChildren();
+  for(const item of cosmetics){
+    const owned=profile?.owned?.includes(item.id)||item.id==='amber';
+    const button=document.createElement('button');
+    button.textContent=item.name+' · '+(profile?.skin===item.id?'Выбрано':owned?'Выбрать':item.price+' осколков');
+    button.style.borderLeft='6px solid '+item.color;
+    button.disabled=profile?.skin===item.id || (!owned && profile?.shards<item.price) || !online;
+    button.onclick=()=>{if(owned)send({type:'equip',skin:item.id});else{pendingSkin=item.id;$('purchase-confirm').hidden=false;$('purchase-text').textContent='Купить «'+item.name+'» за '+item.price+' осколков?';}};
+    list.append(button);
+  }
+}
+$('purchase-no').onclick=()=>{pendingSkin=null;$('purchase-confirm').hidden=true;};
+$('purchase-yes').onclick=()=>{if(pendingSkin)send({type:'buy',skin:pendingSkin});pendingSkin=null;$('purchase-confirm').hidden=true;};
+$('find').onclick=()=>start('queue');
+$('cancel-search').onclick=()=>send({type:'cancelQueue'});
+$('refresh-ranking').onclick=()=>send({type:'leaderboard'});
+$('ranking').ontoggle=()=>{if($('ranking').open)send({type:'leaderboard'});};
+function renderRanking(rows){
+  $('rank-list').replaceChildren();
+  if(!rows.length){$('rank-list').textContent='Пока нет завершённых рейтинговых матчей.';return;}
+  for(const row of rows){const line=document.createElement('p');line.textContent=row.place+'. '+(row.you?'Ты':row.name)+' · '+row.mmr+' · Побед '+row.wins+'/'+row.played;$('rank-list').append(line);}
 }
 $('solo').onclick=e=>{e.currentTarget.blur();start('solo');};
 $('create').onclick=e=>{e.currentTarget.blur();start('create');};
@@ -529,7 +655,7 @@ function showResult(result){
   $('result-title').textContent=!result.reward?'Волна прервана':result.won?'Победа!':'Раунд завершён';
   const earned=result.earned;
   $('result-reward').textContent=result.reward && earned?
-    '+'+earned.xp+' опыта · +'+earned.shards+' осколков'+(result.won && earned.wave?' · Следующая волна открыта':''):
+    '+'+earned.xp+' опыта · +'+earned.shards+' осколков'+(earned.mmr?' · Рейтинг '+(earned.mmr>0?'+':'')+earned.mmr:'')+(result.won && earned.wave?' · Следующая волна открыта':''):
     'Можно попробовать снова.';
   $('hint').textContent=result.won?'Отличный рикошет. Готов к следующей волне?':'Защищай свои ворота и направляй шар краем отражателя.';
   $('mode').textContent='МЕЖДУ ВОЛНАМИ';
@@ -669,11 +795,12 @@ function render(){
     if(i===2){ctx.translate(1000,0);ctx.rotate(Math.PI/2);ctx.scale(1,1);}
     if(i===3)ctx.transform(0,1,1,0,0,0);
     const mine=i===(game?seat:0);
+    const skin=cosmetics.find(item=>item.id===(game?game.skins?.[i]:profile?.skin))||cosmetics[0];
     ctx.fillStyle=mine?'#ffc382':'#70e0c5';ctx.fillRect(310,984,380,16);
     const glow=ctx.createLinearGradient(0,900,0,1000);
     glow.addColorStop(0,'transparent');glow.addColorStop(1,mine?'#ffb34a55':'#6af1c844');
     ctx.fillStyle=glow;ctx.fillRect(310,900,380,84);
-    const gradient=ctx.createLinearGradient(0,951,0,979);gradient.addColorStop(0,'#fff5c8');gradient.addColorStop(.28,mine?'#ffbb71':'#a3e0d2');gradient.addColorStop(.75,mine?'#db6837':'#417e70');gradient.addColorStop(1,'#392f27');
+    const gradient=ctx.createLinearGradient(0,951,0,979);gradient.addColorStop(0,'#fff5c8');gradient.addColorStop(.28,mine?skin.color:'#a3e0d2');gradient.addColorStop(.75,mine?skin.shade:'#417e70');gradient.addColorStop(1,'#392f27');
     ctx.fillStyle='#0b211b';ctx.fillRect(p.x-75,958,150,27);ctx.fillStyle=gradient;ctx.fillRect(p.x-75,952,150,27);ctx.restore();
   });
   for(const b of game?.balls||[{x:545,y:614}]){

@@ -19,7 +19,10 @@ const scripts = [
   '/* ' + license + ' */\n' + sdk.replace(/^\/\/# sourceMappingURL=.*$/gm, ''),
   platform,
   physics.replace(/^export /gm, ''),
+  (await read('catalog.js')).replace(/^export /gm,''),
+  (await read('public/progress-store.js')).replace(/^export /gm,''),
   session,
+  'const networkMode=false; const {send,start,connect,pauseSession,endLocal}=localSession;',
   game
 ];
 const version = createHash('sha256').update([template, css, ...scripts].join('\n')).digest('hex').slice(0, 12);
@@ -49,6 +52,8 @@ const sourceFiles=[
   'package.json','package-lock.json','README.md','.gitignore','server.js','physics.js','arena.test.js',
   'public/index.html','public/game.js','public/style.css','public/platform.js',
   'public/local-session.js','public/network-session.js','scripts/build.mjs','scripts/check-browser.mjs'
+  ,'catalog.js','public/session-router.js','public/runtime-config.js'
+  ,'public/progress-store.js','progress-store.test.js'
 ];
 for (const source of sourceFiles) {
   const destination=path.join(root,'Для GitHub',source);

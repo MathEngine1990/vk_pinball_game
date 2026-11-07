@@ -4,6 +4,8 @@ let game=null,seat=0,target=500,hit=false,profile,online=false,inRoom=false,adsE
 let networkWaiting=false,confirmExit=false;
 function controls(active){
   inRoom=active;$('menu').hidden=active;$('playing').hidden=!active;
+  $('online-menu').hidden=active || !networkMode;$('shop').hidden=active;
+  $('find').disabled=!online;
   $('hit').disabled=!game;document.body.classList.toggle('match',active);
   if(active)$('result').hidden=true;
   $('pause').hidden=!game?.solo;
@@ -19,6 +21,32 @@ function progress(p){
   const rules=waveRules(p.wave);
   $('wave-title').textContent=rules.name+' · Цикл '+rules.cycle;
   $('wave-description').textContent=rules.description;
+  if(networkMode)$('stats').textContent+=' · Рейтинг '+p.mmr;
+  renderShop();
+}
+let pendingSkin=null;
+function renderShop(){
+  const list=$('shop-items');list.replaceChildren();
+  for(const item of cosmetics){
+    const owned=profile?.owned?.includes(item.id)||item.id==='amber';
+    const button=document.createElement('button');
+    button.textContent=item.name+' · '+(profile?.skin===item.id?'Выбрано':owned?'Выбрать':item.price+' осколков');
+    button.style.borderLeft='6px solid '+item.color;
+    button.disabled=profile?.skin===item.id || (!owned && profile?.shards<item.price) || !online;
+    button.onclick=()=>{if(owned)send({type:'equip',skin:item.id});else{pendingSkin=item.id;$('purchase-confirm').hidden=false;$('purchase-text').textContent='Купить «'+item.name+'» за '+item.price+' осколков?';}};
+    list.append(button);
+  }
+}
+$('purchase-no').onclick=()=>{pendingSkin=null;$('purchase-confirm').hidden=true;};
+$('purchase-yes').onclick=()=>{if(pendingSkin)send({type:'buy',skin:pendingSkin});pendingSkin=null;$('purchase-confirm').hidden=true;};
+$('find').onclick=()=>start('queue');
+$('cancel-search').onclick=()=>send({type:'cancelQueue'});
+$('refresh-ranking').onclick=()=>send({type:'leaderboard'});
+$('ranking').ontoggle=()=>{if($('ranking').open)send({type:'leaderboard'});};
+function renderRanking(rows){
+  $('rank-list').replaceChildren();
+  if(!rows.length){$('rank-list').textContent='Пока нет завершённых рейтинговых матчей.';return;}
+  for(const row of rows){const line=document.createElement('p');line.textContent=row.place+'. '+(row.you?'Ты':row.name)+' · '+row.mmr+' · Побед '+row.wins+'/'+row.played;$('rank-list').append(line);}
 }
 $('solo').onclick=e=>{e.currentTarget.blur();start('solo');};
 $('create').onclick=e=>{e.currentTarget.blur();start('create');};
@@ -52,7 +80,7 @@ function showResult(result){
   $('result-title').textContent=!result.reward?'Волна прервана':result.won?'Победа!':'Раунд завершён';
   const earned=result.earned;
   $('result-reward').textContent=result.reward && earned?
-    '+'+earned.xp+' опыта · +'+earned.shards+' осколков'+(result.won && earned.wave?' · Следующая волна открыта':''):
+    '+'+earned.xp+' опыта · +'+earned.shards+' осколков'+(earned.mmr?' · Рейтинг '+(earned.mmr>0?'+':'')+earned.mmr:'')+(result.won && earned.wave?' · Следующая волна открыта':''):
     'Можно попробовать снова.';
   $('hint').textContent=result.won?'Отличный рикошет. Готов к следующей волне?':'Защищай свои ворота и направляй шар краем отражателя.';
   $('mode').textContent='МЕЖДУ ВОЛНАМИ';
@@ -192,11 +220,12 @@ function render(){
     if(i===2){ctx.translate(1000,0);ctx.rotate(Math.PI/2);ctx.scale(1,1);}
     if(i===3)ctx.transform(0,1,1,0,0,0);
     const mine=i===(game?seat:0);
+    const skin=cosmetics.find(item=>item.id===(game?game.skins?.[i]:profile?.skin))||cosmetics[0];
     ctx.fillStyle=mine?'#ffc382':'#70e0c5';ctx.fillRect(310,984,380,16);
     const glow=ctx.createLinearGradient(0,900,0,1000);
     glow.addColorStop(0,'transparent');glow.addColorStop(1,mine?'#ffb34a55':'#6af1c844');
     ctx.fillStyle=glow;ctx.fillRect(310,900,380,84);
-    const gradient=ctx.createLinearGradient(0,951,0,979);gradient.addColorStop(0,'#fff5c8');gradient.addColorStop(.28,mine?'#ffbb71':'#a3e0d2');gradient.addColorStop(.75,mine?'#db6837':'#417e70');gradient.addColorStop(1,'#392f27');
+    const gradient=ctx.createLinearGradient(0,951,0,979);gradient.addColorStop(0,'#fff5c8');gradient.addColorStop(.28,mine?skin.color:'#a3e0d2');gradient.addColorStop(.75,mine?skin.shade:'#417e70');gradient.addColorStop(1,'#392f27');
     ctx.fillStyle='#0b211b';ctx.fillRect(p.x-75,958,150,27);ctx.fillStyle=gradient;ctx.fillRect(p.x-75,952,150,27);ctx.restore();
   });
   for(const b of game?.balls||[{x:545,y:614}]){
