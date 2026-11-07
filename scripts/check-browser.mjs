@@ -71,6 +71,9 @@ try {
       await call('Page.reload');await delay(350);
       assert.equal(await evaluate("$('difficulty').value"),'easy','Difficulty persists');
       const initialWave=await evaluate('profile.wave');
+    await resize(390,844);
+    assert.ok(await evaluate("!profilePanel.open && $('solo').getBoundingClientRect().top<$('peer-entry').getBoundingClientRect().top && $('peer-entry').getBoundingClientRect().top<profileSummary.getBoundingClientRect().top"),'Start actions precede collapsed profile');
+    await screenshot(entry+'-menu');
     assert.ok(await evaluate("$('wave-title').textContent.includes(waveRules(profile.wave).name)"),'Wave preview matches saved progression');
     await evaluate("$('solo').click()");
     await delay(100);
@@ -79,15 +82,27 @@ try {
     await evaluate('game.energy=100');await delay(40);
     await evaluate("$('magnet').click()");
     assert.ok(await evaluate('game.energy===0 && game.magnetUntil>game.t'),'Magnet UI spends energy and arms');
+    await evaluate("$('help-button').click()");
+    assert.ok(await evaluate('helpDialog.open && game.paused'),'Help pauses the match');
+    await evaluate("$('close-help').click();$('resume').click()");
+    assert.ok(await evaluate('!helpDialog.open && !game.paused'));
+    if(entry==='web'){
+      await evaluate('game.energy=100;game.magnetUntil=0');
+      const board=await evaluate('table.getBoundingClientRect().toJSON()');
+      await call('Input.dispatchMouseEvent',{type:'mousePressed',x:board.x+board.width/2,y:board.y+board.height/2,button:'right',clickCount:1});
+      await call('Input.dispatchMouseEvent',{type:'mouseReleased',x:board.x+board.width/2,y:board.y+board.height/2,button:'right',clickCount:1});
+      assert.ok(await evaluate('game.energy===0 && game.magnetUntil>game.t'),'Real right mouse click activates magnet');
+    }
     assert.deepEqual(await evaluate('game.rules.bumpers'),await evaluate('waveRules(profile.wave).bumpers'));
     for(const [width,height] of [[320,568],[568,320],[390,844],[844,390],[720,720],[1280,720]]){
       await resize(width,height);
-      assert.ok(await evaluate(`[table,cabinet,$('hit'),$('pause')].every(element=>{
+      assert.ok(await evaluate(`[table,cabinet,$('hit'),$('pause'),$('magnet'),$('hud'),$('help-button')].every(element=>{
         const r=element.getBoundingClientRect();
         return r.width>0 && r.height>0 && r.left>=0 && r.top>=0 && r.right<=innerWidth+1 && r.bottom<=innerHeight+1;
       }) && document.documentElement.scrollWidth<=innerWidth && document.documentElement.scrollHeight<=innerHeight+1`),'Viewport '+width+'x'+height);
     }
     await resize(390,844);
+    assert.ok(await evaluate("getComputedStyle(document.querySelector('.panel')).display==='none' && table.getBoundingClientRect().width>=innerWidth-12 && $('magnet').getBoundingClientRect().top>=$('touchpad').getBoundingClientRect().bottom-1"),'Full-width board and magnet under finger area');
     await screenshot(entry);
     if(entry==='mobile'){
       const box=await evaluate("$('touchpad').getBoundingClientRect().toJSON()");

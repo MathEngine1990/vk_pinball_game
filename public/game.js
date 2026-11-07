@@ -2,6 +2,27 @@ const $=id=>document.getElementById(id);
 const table=$('table'), ctx=table.getContext('2d');
 let game=null,seat=0,target=500,hit=false,profile,online=false,inRoom=false,adsEnabled=false;
 let networkWaiting=false,confirmExit=false;
+// Keep the same controls and IDs when changing between menu and arena layouts.
+const profilePanel=document.createElement('details');profilePanel.id='profile-panel';
+const profileSummary=document.createElement('summary');profileSummary.textContent='Настройки и профиль';profilePanel.append(profileSummary);
+const menuPanel=document.querySelector('.panel'),mainMenu=$('menu');
+mainMenu.before(profilePanel);mainMenu.prepend($('solo'));mainMenu.after($('peer-entry'),profilePanel);
+for(const el of [ $('hint'),$('result'),$('progress-overview'),$('wave-preview'),$('difficulty').closest('label'),$('difficulty-note'),$('shop'),$('help'),$('settings'),$('gesture'),document.querySelector('.stats') ])profilePanel.append(el);
+menuPanel.querySelector('small')?.remove();menuPanel.querySelector('h1')?.remove();
+const gameHeader=document.querySelector('header'),originalFooter=document.querySelector('.cabinet footer');
+gameHeader.append($('playing'));
+const helpButton=document.createElement('button');helpButton.id='help-button';helpButton.textContent='?';helpButton.title='Помощь и управление';helpButton.setAttribute('aria-label','Помощь и управление');$('playing').append(helpButton);
+$('hit').insertAdjacentHTML('afterbegin','<span aria-hidden="true" class="hit-icon">✦</span>');
+$('leave').textContent='↪';$('leave').title='Выйти';$('leave').setAttribute('aria-label','Выйти');
+document.querySelector('.cabinet').append($('ability'));
+$('touchpad').textContent='↔';
+const helpDialog=document.createElement('dialog');helpDialog.id='help-dialog';
+helpDialog.innerHTML='<button id="close-help" aria-label="Закрыть помощь">Закрыть ×</button><div id="help-content"></div>';
+document.body.append(helpDialog);
+helpButton.onclick=()=>{if(!game)return;pauseSession(true);$('help-content').append($('help'),$('settings'),$('gesture'));$('help').open=true;helpDialog.showModal();};
+function closeHelp(){helpDialog.close();profilePanel.append($('help'),$('settings'),$('gesture'));}
+$('close-help').onclick=closeHelp;
+helpDialog.addEventListener('cancel',e=>{e.preventDefault();closeHelp();});
 // All feedback is local: no audio downloads, analytics or network requests.
 let audioContext=null,lastTone=0,goalFlashUntil=0,goalFlashOwn=false;
 let previousBalls=[],sparks=[];
@@ -32,8 +53,11 @@ for(const [id,key] of [['sound-enabled','sound'],['haptics-enabled','haptics']])
   $(id).onchange=()=>{feedbackSettings[key]=$(id).checked;try{localStorage.setItem('rikoshet-feedback',JSON.stringify(feedbackSettings));}catch{}unlockAudio();if(feedbackSettings[key])feedback('perfect');};
 }
 try{$('help').open=localStorage.getItem('rikoshet-help-seen')!=='1';}catch{$('help').open=true;}
-$('help-done').onclick=()=>{$('help').open=false;try{localStorage.setItem('rikoshet-help-seen','1');}catch{}};
+$('help-done').onclick=()=>{$('help').open=false;if(helpDialog.open)closeHelp();try{localStorage.setItem('rikoshet-help-seen','1');}catch{}};
 function controls(active){
+  if(!active && helpDialog.open)closeHelp();
+  profilePanel.hidden=active;
+  if(active){gameHeader.prepend($('hud'));profilePanel.open=false;}else originalFooter.prepend($('hud'));
   $('ability').hidden=!game?.solo;
   if(active){$('result-summary').hidden=true;$('result-level').hidden=true;}
   inRoom=active;$('menu').hidden=active;$('playing').hidden=!active;
@@ -114,13 +138,15 @@ function suspendGame(){
 function updatePause(){
   const visible=Boolean(game && (game.paused || networkWaiting));
   $('pause-screen').hidden=!visible;
-  $('pause').textContent=game?.paused?'Продолжить':'Пауза';
+  $('pause').textContent=game?.paused?'▶':'Ⅱ';
+  $('pause').title=game?.paused?'Продолжить':'Пауза';$('pause').setAttribute('aria-label',$('pause').title);
   $('resume').hidden=networkWaiting;
   $('quit').hidden=!confirmExit || networkWaiting;
   $('pause-title').textContent=networkWaiting?'Связь прервана':confirmExit?'Завершить волну?':'Пауза';
   $('pause-text').textContent=networkWaiting?'Ожидаем соединения с соперником':confirmExit?'Награда за незавершённую волну не начисляется':'Нажми «Продолжить», когда будешь готов';
 }
 function showResult(result){
+  profilePanel.open=true;
   confirmExit=false;updatePause();
   $('result').hidden=false;
   $('result-title').textContent=!result.reward?'Волна прервана':result.won?'Победа!':'Раунд завершён';
@@ -146,6 +172,7 @@ $('quit').onclick=()=>{confirmExit=false;send({type:'leave'});};
 $('pause').onclick=()=>{confirmExit=false;pauseSession(!game?.paused);};
 $('resume').onclick=()=>{confirmExit=false;pauseSession(false);};
 $('hit').onclick=requestHit;
+table.addEventListener('contextmenu',e=>{if(game){e.preventDefault();if(game.solo && !game.paused)send({type:'magnet'});}});
 addEventListener('visibilitychange',()=>{if(document.hidden)suspendGame();});
 addEventListener('blur',suspendGame);
 const scheme=$('scheme');
@@ -161,7 +188,7 @@ function updateSensitivity(){
 updateSensitivity();
 sensitivity.oninput=()=>{updateSensitivity();try{localStorage.setItem('rikoshet-sensitivity',sensitivity.value);}catch{}};
 function explainScheme(){
-  $('gesture').textContent=scheme.value==='thumb'?'Веди пальцем по площадке под полем. Отпусти перед касанием шара — сильный удар.':'Веди мышью или касайся поля. Щелчок — удар. Клавиатура: ← → и пробел.';
+  $('gesture').textContent=scheme.value==='thumb'?'Веди пальцем по площадке под полем. Отпусти перед касанием шара — сильный удар.':'Веди мышью по полю. Левая кнопка — удар, правая — магнит. Клавиатура: ← → и пробел.';
   $('sensitivity-row').hidden=scheme.value!=='thumb';
   $('touchpad').hidden=!game || scheme.value!=='thumb';
 }
@@ -220,7 +247,7 @@ function fitArena(){
   }
 }
 const fitObserver=new ResizeObserver(fitArena);
-for(const el of [stage,cabinet.querySelector('footer'),cabinet.querySelector('.plate')])fitObserver.observe(el);
+for(const el of [stage,cabinet.querySelector('footer'),cabinet.querySelector('.plate'),$('ability'),$('touchpad')])fitObserver.observe(el);
 function goalMark(x,y,angle,label,mine){
   ctx.save();ctx.translate(x,y);ctx.rotate(angle);
   ctx.fillStyle=mine?'#ffd19a':'#c6f9e7';ctx.textAlign='center';ctx.font='bold 30px Arial';
@@ -343,6 +370,7 @@ function render(){
   }
   $('power').textContent=!pad?'':perfect?'✦ Точный удар!':elapsed<0.17?'✦ Импульс':elapsed<0.8?'Удар заряжается':'✦ Удар готов';
   $('hit-label').textContent=elapsed<0.17?'✦ Импульс':elapsed<0.8?'Заряд '+(0.8-elapsed).toFixed(1)+' с':'✦ Удар готов';
+  $('hit').title=$('hit-label').textContent;$('hit').setAttribute('aria-label',$('hit-label').textContent);
   $('hit-meter').style.width=(Math.max(0,Math.min(1,elapsed/.8))*100)+'%';
   $('hit').disabled=!pad || elapsed<.8 || Boolean(game?.paused) || networkWaiting;
   $('hud').textContent=!game?'ВОЛНА '+String(profile?.wave||1).padStart(2,'0'):game.solo?'Волна '+game.wave+' · Прочность '+game.hp[0]+' · '+Math.ceil(150-game.t)+' с':game.score[seat]+' : '+game.score[1-seat]+' · '+(game.t<120?Math.ceil(120-game.t)+' с':'Овертайм');

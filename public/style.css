@@ -205,3 +205,42 @@ progress { display: block; width: 100%; height: 9px; margin: 7px 0; accent-color
 body.match #progress-overview { display: none; }
 #menu > .scheme, #difficulty-note { grid-column: 1 / -1; }
 #difficulty-note { margin: 2px 0 8px; }
+/* Compact game HUD, with all explanatory content behind the profile/help controls. */
+#profile-panel > summary { display:block; padding:13px; border:1px solid #71816a; border-radius:8px; font-size:15px; font-weight:700; background:linear-gradient(#304336,#1c3025); }
+#profile-panel { margin:7px 0; }
+#menu { grid-template-columns:1fr; }
+#peer-entry { margin:7px 0 0; }
+#playing { flex-wrap:nowrap; align-items:center; gap:5px; }
+#playing button { flex:0 0 42px; width:42px; height:42px; min-height:42px; padding:0; font-size:22px; border-radius:10px; }
+#hit-label { position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); }
+.hit-icon { display:inline; }
+body:not(.match) .hit-icon { display:none; }
+body.match header { height:52px; padding:3px 8px; gap:6px; }
+body.match header > b:not(#hud) { display:none; }
+header .hit-icon { font-size:22px; color:inherit; }
+header #hud { font-size:11px; font-weight:600; max-width:220px; }
+body.match main { grid-template-columns:minmax(0,1fr); grid-template-rows:minmax(0,1fr); padding:2px; gap:0; }
+body.match .panel { display:none; }
+body.match .stage { grid-row:1; align-items:start; }
+body.match .plate, body.match footer { display:none; }
+body.match .cabinet { box-shadow:none; border-width:2px; }
+body.match #touchpad { height:48px; font-size:24px; }
+body.match #ability { margin:0; position:relative; }
+body.match #magnet { border-radius:0; height:44px; min-height:44px; font-size:13px; padding:4px; }
+body.match #energy { position:absolute; bottom:0; left:0; margin:0; height:4px; pointer-events:none; }
+body.match #energy-note { display:none; }
+#help-dialog { width:min(460px,calc(100vw - 24px)); max-height:calc(100dvh - 24px); overflow:auto; color:#f6edd9; background:#1a3026; border:1px solid #d1af77; border-radius:12px; padding:14px; }
+#help-dialog::backdrop { background:#06120bd9; }
+#help-dialog p { font-size:13px; line-height:1.5; }
+#close-help { width:100%; }
+@media (max-width:740px) and (orientation:portrait) {
+  body:not(.match) main { grid-template-rows:auto minmax(0,1fr); }
+  body:not(.match) .panel { grid-row:1; max-height:60dvh; }
+  body:not(.match) .stage { grid-row:2; }
+}
+@media (max-height:540px) and (orientation:landscape) {
+  body.match header { height:44px; }
+  #playing button { height:40px; min-height:40px; width:40px; flex-basis:40px; }
+  body.match #touchpad { height:40px; }
+  body.match #magnet { height:40px; min-height:40px; }
+}

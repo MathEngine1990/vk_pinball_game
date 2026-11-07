@@ -10,6 +10,7 @@ function showSaveStatus(status){
   $('sync-save').hidden=!status.cloud || !['pending','unavailable'].includes(status.kind);
   $('import-save').hidden=!status.canImport;
   $('save-conflict').hidden=status.kind!=='conflict';
+  if(['conflict','unavailable'].includes(status.kind) && !game)profilePanel.open=true;
   if(status.conflict)$('save-conflict-text').textContent='На устройстве: волна '+status.profile.wave+', '+status.profile.shards+' осколков. В VK: волна '+status.conflict.wave+', '+status.conflict.shards+' осколков. Замена перенесёт всю выбранную версию.';
 }
 async function synchronize(action='sync'){
