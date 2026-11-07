@@ -5,10 +5,11 @@ function serve() {
   return {x:500,y:500,vx:360*Math.cos(angle),vy:360*Math.sin(angle)};
 }
 export function arena(solo, wave=1) {
-  return {solo,wave,t:0,balls:[serve()],hp:[8,8,8,8],score:[0,0],winner:null,
+  return {solo,wave,t:0,paused:false,goalCount:0,lastGoal:null,balls:[serve()],hp:[8,8,8,8],score:[0,0],winner:null,
     pads:Array.from({length:solo?4:2},()=>({x:500,target:500,hit:-10,perfect:0}))};
 }
 export function input(g,i,x,hit) {
+  if(g.paused || g.winner!==null) return;
   const p=g.pads[i];
   if(Number.isFinite(x)) p.target=clamp(x,75,925);
   if(hit && g.t-p.hit>=0.8) p.hit=g.t;
@@ -24,18 +25,20 @@ function wall(g,b,i) {
     const angle=clamp((b[along]-p.x)/85,-1,1)*1.02;
     const perfect=g.t-p.hit<0.17;
     const speed=Math.min(740,Math.hypot(b.vx,b.vy)+(perfect?160:12));
-    if(perfect) p.perfect++;
+    if(perfect) {p.perfect++;b.powerUntil=g.t+0.5;}
     b[vel]=inward*Math.cos(angle)*speed;
     b[vertical?'vy':'vx']=Math.sin(angle)*speed;
   } else if(depth<=14) {
     if(active && Math.abs(b[along]-500)<190) {
       if(g.solo) g.hp[i]--; else g.score[1-i]++;
-      Object.assign(b,serve());
+      g.goalCount=(g.goalCount || 0)+1;
+      g.lastGoal={side:i,t:g.t};
+      Object.assign(b,serve(),{powerUntil:0});
     } else { b[vel]*=-1; b[axis]=low?14:986; }
   }
 }
 export function step(g,dt) {
-  if(g.winner!==null) return;
+  if(g.winner!==null || g.paused) return;
   g.t+=dt;
   if(g.solo && g.balls.length<1+Math.min(2,Math.floor(g.t/35))) g.balls.push(serve());
   g.pads.forEach((p,i)=>{
@@ -77,4 +80,16 @@ export function step(g,dt) {
       g.winner=g.hp[0]>0 && g.hp[0]>=Math.max(...g.hp.slice(1))?0:1;
   } else if(Math.max(...g.score)>=7 || (g.t>=120 && g.score[0]!==g.score[1]))
     g.winner=g.score[0]>g.score[1]?0:1;
+}
+
+export function rewards(game, seat) {
+  const won = game.winner === seat;
+  const factor = game.solo ? 0.7 : 1;
+  const bonus = Math.min(10, game.pads[seat].perfect);
+  return {
+    xp: Math.floor((35 + (won ? 20 : 0) + bonus) * factor),
+    shards: Math.floor((20 + (won ? 10 : 0) + bonus) * factor),
+    wave: Number(game.solo && won),
+    mmr: game.solo ? 0 : won ? 16 : -16
+  };
 }

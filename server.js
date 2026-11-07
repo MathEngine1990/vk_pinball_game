@@ -3,7 +3,7 @@ import {readFileSync} from 'node:fs';
 import {DatabaseSync} from 'node:sqlite';
 import {createHmac,randomBytes,timingSafeEqual} from 'node:crypto';
 import {WebSocketServer,WebSocket} from 'ws';
-import {arena,input,step} from './physics.js';
+import {arena,input,step,rewards} from './physics.js';
 
 const {VK_APP_ID,VK_SECRET,PUBLIC_ORIGIN}=process.env;
 const production=Boolean(VK_APP_ID || VK_SECRET || PUBLIC_ORIGIN || process.env.NODE_ENV==='production');
@@ -14,6 +14,8 @@ const profile=id=>db.prepare('SELECT xp,shards,wave,mmr FROM players WHERE id=?'
 const clients=new Map(), rooms=new Map(), membership=new Map();
 const files=new Map(Object.entries({'/':['public/index.html','text/html'],'/game.js':['public/game.js','text/javascript'],'/style.css':['public/style.css','text/css'],'/bridge.js':['node_modules/@vkontakte/vk-bridge/dist/browser.min.js','text/javascript']}));
 for(const entry of ['/web.html','/mobile.html','/index.html'])files.set(entry,files.get('/'));
+files.set('/platform.js',['public/platform.js','text/javascript']);
+files.set('/session.js',['public/network-session.js','text/javascript']);
 const server=http.createServer((req,res)=>{
   res.setHeader('Referrer-Policy','no-referrer');
   res.setHeader('X-Content-Type-Options','nosniff');
@@ -21,7 +23,12 @@ const server=http.createServer((req,res)=>{
   const file=files.get(req.url.split('?')[0]);
   if(!file){res.writeHead(404).end();return;}
   res.setHeader('Content-Type',file[1]+'; charset=utf-8');
-  res.end(readFileSync(new URL(file[0],import.meta.url)));
+  let content=readFileSync(new URL(file[0],import.meta.url),'utf8');
+  if(file[1]==='text/html'){
+    content=content.replace('<!-- GAME_SCRIPTS -->',
+      '<script src="/bridge.js"></script><script src="/platform.js"></script><script src="/session.js"></script><script src="/game.js"></script>');
+  }
+  res.end(content);
 });
 const ws=new WebSocketServer({noServer:true,maxPayload:8192});
 server.on('upgrade',(req,sock,head)=>{
@@ -51,15 +58,14 @@ function finish(r,reward=true){
   try {
     r.ids.forEach((id,i)=>{
       if(!reward)return;
-      const won=r.game.winner===i, factor=r.game.solo?0.7:1;
-      const bonus=Math.min(10,r.game.pads[i].perfect);
+      const earned=rewards(r.game,i);
       db.prepare('UPDATE players SET xp=xp+?, shards=shards+?,wave=wave+?,mmr=max(0,mmr+?) WHERE id=?').run(
-        Math.floor((35+20*won+bonus)*factor),Math.floor((20+10*won+bonus)*factor),Number(r.game.solo && won),r.game.solo?0:won?16:-16,id);
+        earned.xp,earned.shards,earned.wave,earned.mmr,id);
     });
     db.exec('COMMIT');
   } catch(e){db.exec('ROLLBACK');throw e;}
   remove(r);
-  r.ids.forEach((id,i)=>send(id,{type:'end',won:r.game?.winner===i,reward,profile:profile(id)}));
+  r.ids.forEach((id,i)=>send(id,{type:'end',won:r.game?.winner===i,reward,earned:reward?rewards(r.game,i):null,wave:r.game?.wave,profile:profile(id)}));
 }
 ws.on('connection',s=>{
   let id,windowStart=0,count=0;
@@ -85,6 +91,9 @@ ws.on('connection',s=>{
       if(m.type==='leave'){
         if(current.game && !current.game.solo){current.game.winner=1-current.ids.indexOf(id);finish(current,current.game.t>=15);}
         else finish(current,false);
+      } else if(m.type==='pause' && current.game?.solo && typeof m.paused==='boolean'){
+        current.game.paused=m.paused;
+        snapshot(current,id);
       } else if(m.type==='input' && current.game)input(current.game,current.ids.indexOf(id),m.x,m.hit===true);
       return;
     }

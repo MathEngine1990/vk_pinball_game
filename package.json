@@ -2,7 +2,12 @@
   "name": "orb-arena",
   "private": true,
   "type": "module",
-  "scripts": {"start":"node server.js","test":"node --test"},
+  "scripts": {
+    "start": "node server.js",
+    "build": "node scripts/build.mjs",
+    "test": "node --test arena.test.js",
+    "test:browser": "node scripts/check-browser.mjs"
+  },
   "engines":{"node":">=24.0.0"},
   "dependencies":{"@vkontakte/vk-bridge":"2.15.10","ws":"^8.18.3"}
 }

@@ -4,7 +4,72 @@ import {spawn} from 'node:child_process';
 import {once} from 'node:events';
 import {createHmac} from 'node:crypto';
 import {WebSocket} from 'ws';
-import {arena,step,input} from './physics.js';
+import {arena,step,input,rewards} from './physics.js';
+
+test('pause freezes physics and rejects controls until resumed',()=>{
+  const g=arena(true);
+  g.paused=true;
+  const before=JSON.stringify(g);
+  input(g,0,900,true);
+  step(g,1/60);
+  assert.equal(JSON.stringify(g),before);
+  g.paused=false;
+  input(g,0,900,true);
+  step(g,1/60);
+  assert.ok(g.t>0 && g.pads[0].x>500);
+});
+
+test('fast ball reflects on all four paddles and closed goals remain walls',()=>{
+  const cases=[
+    {x:500,y:945,vx:0,vy:740,axis:'vy',sign:-1},
+    {x:500,y:55,vx:0,vy:-740,axis:'vy',sign:1},
+    {x:55,y:500,vx:-740,vy:0,axis:'vx',sign:1},
+    {x:945,y:500,vx:740,vy:0,axis:'vx',sign:-1}
+  ];
+  for(const b of cases){
+    const g=arena(true);
+    g.balls=[{...b}];
+    step(g,1/60);
+    assert.ok(g.balls[0][b.axis]*b.sign>0);
+    assert.deepEqual(g.hp,[8,8,8,8]);
+  }
+  const g=arena(true);
+  g.hp[3]=0;g.balls=[{x:985,y:500,vx:740,vy:0}];
+  step(g,1/60);
+  assert.equal(g.hp[3],0);
+  assert.ok(g.balls[0].vx<0);
+});
+
+test('cooldown, goal event and shared solo rewards',()=>{
+  const g=arena(true);
+  input(g,0,500,true);const first=g.pads[0].hit;
+  g.t=.3;input(g,0,500,true);
+  assert.equal(g.pads[0].hit,first);
+  g.t=.81;input(g,0,500,true);
+  assert.equal(g.pads[0].hit,.81);
+  g.balls=[{x:330,y:985,vx:0,vy:360}];step(g,1/60);
+  assert.equal(g.goalCount,1);assert.equal(g.lastGoal.side,0);
+  g.winner=0;g.pads[0].perfect=100;
+  assert.deepEqual(rewards(g,0),{xp:45,shards:28,wave:1,mmr:0});
+});
+
+test('three complete waves stay finite, bounded and always resolve',()=>{
+  for(const wave of [1,2,3]){
+    const g=arena(true,wave);
+    for(let tick=0;tick<9002 && g.winner===null;tick++){
+      const nearest=g.balls.reduce((a,b)=>a.y>b.y?a:b);
+      input(g,0,nearest.x,tick%50===0);
+      step(g,1/60);
+      assert.ok(g.hp.every(hp=>hp>=0));
+      for(const b of g.balls){
+        assert.ok([b.x,b.y,b.vx,b.vy].every(Number.isFinite));
+        assert.ok(b.x>=0 && b.x<=1000 && b.y>=0 && b.y<=1000);
+        assert.ok(Math.hypot(b.vx,b.vy)<=740.0001);
+      }
+    }
+    assert.notEqual(g.winner,null);
+  }
+});
 
 test('timed reflection, goal, multiball and overtime',()=>{
   const g=arena(false);g.balls=[{x:520,y:950,vx:0,vy:360}];
@@ -21,7 +86,7 @@ test('signed VK sessions, two devices, room, reconnection and saved reward',{tim
   t.after(()=>child.kill());
   const [line]=await once(child.stdout,'data');
   const url=line.toString().match(/http:\/\/[^\s]+/)[0];
-  for(const path of ['/','/bridge.js','/game.js','/style.css'])assert.equal((await fetch(url+path)).status,200);
+  for(const path of ['/','/web.html','/mobile.html','/bridge.js','/game.js','/session.js','/platform.js','/style.css'])assert.equal((await fetch(url+path)).status,200);
   assert.equal((await fetch(url+'/arena.sqlite')).status,404);
   async function client(id,valid=true){
     const s=new WebSocket(url.replace('http','ws')+'/play',{origin});t.after(()=>s.terminate());
@@ -45,4 +110,12 @@ test('signed VK sessions, two devices, room, reconnection and saved reward',{tim
   second.send({type:'leave'});assert.equal((await a.wait('end')).reward,true);
   const otherDevice=await client('22');assert.equal((await otherDevice.wait('ready')).profile.xp,35);
   a.send({type:'solo'});assert.equal((await a.wait('state')).game.pads.length,4);
+  a.send({type:'pause',paused:true});
+  let paused;
+  do{paused=(await a.wait('state')).game;}while(!paused.paused);
+  for(let i=0;i<3;i++)assert.equal((await a.wait('state')).game.t,paused.t);
+  a.send({type:'pause',paused:false});
+  let resumed;
+  do{resumed=(await a.wait('state')).game;}while(resumed.paused);
+  assert.ok(resumed.t>=paused.t);
 });

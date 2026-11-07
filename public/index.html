@@ -1,13 +1,16 @@
 <!doctype html>
-<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Арена: Рикошет</title><link rel="stylesheet" href="/style.css"><script defer src="/bridge.js"></script><script defer src="/game.js"></script></head>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Арена: Рикошет</title><link rel="stylesheet" href="/style.css"></head>
 <body><header><b><i>◉</i> АРЕНА: РИКОШЕТ</b><span id="account">Подключение…</span></header>
 <main><section class="panel"><small>ПИНБОЛ • АРКАДА</small><h1>РИКОШЕТ<span>.</span></h1>
 <p id="hint" role="status">Защищайте свои ворота. Направляйте шар краем отражателя.</p>
 <div id="menu"><button id="solo">Продолжить волну <strong>↗</strong></button><button id="create">Создать дуэль <strong>＋</strong></button><form id="join"><input id="code" maxlength="8" placeholder="Код комнаты" aria-label="Код комнаты" required><button>Войти</button></form></div>
-<div id="playing" hidden><button id="hit">Сильный удар <strong>✦</strong></button><button id="leave">Выйти</button></div>
+<section id="result" hidden aria-live="polite"><b id="result-title"></b><p id="result-reward"></p></section>
+<div id="playing" hidden><button id="hit"><span id="hit-label">✦ Удар готов</span><span id="hit-meter"></span></button><button id="pause">Пауза</button><button id="leave">Выйти</button></div>
+<details id="settings"><summary>Управление и чувствительность</summary>
 <label class="scheme">Управление <select id="scheme"><option value="thumb">Одним пальцем</option><option value="direct">По позиции</option></select></label>
+<label class="scheme" id="sensitivity-row">Чувствительность <input id="sensitivity" type="range" min="0.7" max="2.2" step="0.1" value="1.4"><output id="sensitivity-value">1,4</output></label></details>
 <p id="gesture"></p>
-<div class="stats"><small>ПРОГРЕСС</small><p id="stats">—</p></div></section>
+<div class="stats"><span id="stats">—</span><small id="save-note"></small></div></section>
 <div class="stage"><section class="cabinet"><div class="plate"><b>АРЕНА <em>/</em> РИКОШЕТ</b><span id="mode">ТРЕНИРОВОЧНАЯ АРЕНА</span></div>
-<canvas id="table" width="1000" height="1000" aria-label="Поле пинбола. Ваш отражатель внизу"></canvas>
-<footer><b id="hud">ВОЛНА 01</b><span id="power"></span></footer></section></div></main></body></html>
+<div class="board"><canvas id="table" width="1000" height="1000" aria-label="Поле пинбола. Твои оранжевые ворота внизу. Бирюзовые ворота — цели."></canvas><div id="pause-screen" hidden><b id="pause-title">Пауза</b><span id="pause-text">Волна продолжится по нажатию</span><button id="resume">Продолжить</button><button id="quit" hidden>Завершить волну</button></div><div id="event" aria-live="polite"></div></div>
+<footer><b id="hud">ВОЛНА 01</b><span id="power"></span></footer><div id="touchpad" hidden aria-label="Площадка управления одним пальцем">⇆ Веди пальцем · отпусти для удара</div></section></div></main><!-- GAME_SCRIPTS --></body></html>
