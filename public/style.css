@@ -231,7 +231,7 @@ body.match .panel { display:none; }
 body.match .stage { grid-row:1; align-items:start; }
 body.match .plate, body.match footer { display:none; }
 body.match .cabinet { box-shadow:none; border-width:2px; }
-body.match #touchpad { height:48px; font-size:24px; }
+body.match #touchpad { height:48px; font-size:12px; text-align:center; line-height:1.2; }
 body.match #ability { margin:0; position:relative; }
 body.match #magnet { border-radius:0; height:44px; min-height:44px; font-size:13px; padding:4px; }
 body.match #energy { position:absolute; bottom:0; left:0; margin:0; height:4px; pointer-events:none; }
@@ -248,6 +248,6 @@ body.match #energy-note { display:none; }
 @media (max-height:540px) and (orientation:landscape) {
   body.match header { height:44px; }
   #playing button { height:40px; min-height:40px; width:40px; flex-basis:40px; }
-  body.match #touchpad { height:40px; }
+  body.match #touchpad { height:40px; font-size:10px; }
   body.match #magnet { height:40px; min-height:40px; }
 }

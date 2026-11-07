@@ -15,7 +15,7 @@ const helpButton=document.createElement('button');helpButton.id='help-button';he
 $('hit').insertAdjacentHTML('afterbegin','<span aria-hidden="true" class="hit-icon">✦</span>');
 $('leave').textContent='↪';$('leave').title='Выйти';$('leave').setAttribute('aria-label','Выйти');
 document.querySelector('.cabinet').append($('ability'));
-$('touchpad').textContent='↔';
+$('touchpad').textContent='↔ Веди пальцем · отпусти для импульса';
 const helpDialog=document.createElement('dialog');helpDialog.id='help-dialog';
 helpDialog.innerHTML='<button id="close-help" aria-label="Закрыть помощь">Закрыть ×</button><div id="help-content"></div>';
 document.body.append(helpDialog);
