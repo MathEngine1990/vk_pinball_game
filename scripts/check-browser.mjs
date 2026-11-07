@@ -70,6 +70,10 @@ try {
       await evaluate("$('difficulty').value='easy';$('difficulty').onchange()");
       await call('Page.reload');await delay(350);
       assert.equal(await evaluate("$('difficulty').value"),'easy','Difficulty persists');
+    await evaluate("$('reduced-effects').checked=true;$('reduced-effects').onchange()");
+    await call('Page.reload');await delay(350);
+    assert.ok(await evaluate("$('reduced-effects').checked && feedbackSettings.reduced"),'Reduced effects preference persists');
+    await evaluate("$('reduced-effects').checked=false;$('reduced-effects').onchange()");
       const initialWave=await evaluate('profile.wave');
     await resize(390,844);
     assert.ok(await evaluate("!profilePanel.open && $('solo').getBoundingClientRect().top<$('peer-entry').getBoundingClientRect().top && $('peer-entry').getBoundingClientRect().top<profileSummary.getBoundingClientRect().top"),'Start actions precede collapsed profile');
@@ -79,6 +83,7 @@ try {
     await delay(100);
     assert.equal(await evaluate('game.wave'),initialWave);
     assert.equal(await evaluate('game.difficulty'),'easy');
+    assert.ok(await evaluate("!transition.hidden && transition.textContent.includes('Волна')"),'Wave introduction appears without blocking play');
     await evaluate('game.energy=100');await delay(40);
     await evaluate("$('magnet').click()");
     assert.ok(await evaluate('game.energy===0 && game.magnetUntil>game.t'),'Magnet UI spends energy and arms');
@@ -104,6 +109,12 @@ try {
     await resize(390,844);
     assert.ok(await evaluate("getComputedStyle(document.querySelector('.panel')).display==='none' && table.getBoundingClientRect().width>=innerWidth-12 && $('magnet').getBoundingClientRect().top>=$('touchpad').getBoundingClientRect().bottom-1"),'Full-width board and magnet under finger area');
     await screenshot(entry);
+    await evaluate('game.hp[1]=0');await delay(400);
+    assert.ok(await evaluate('lastHP[1]===0 && Number.isFinite(closedAt[1])'),'Eliminated goal closes visually');
+    await screenshot(entry+'-closed-goal');
+    await evaluate("$('reduced-effects').checked=true;$('reduced-effects').onchange()");await delay(40);
+    assert.ok(await evaluate('trails.length===0 && sparks.length===0'),'Reduced mode removes decorative trails and particles');
+    await evaluate("$('reduced-effects').checked=false;$('reduced-effects').onchange()");
     if(entry==='mobile'){
       const box=await evaluate("$('touchpad').getBoundingClientRect().toJSON()");
       const x=box.x+box.width*.4,y=box.y+box.height*.5;

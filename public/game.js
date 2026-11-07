@@ -25,9 +25,12 @@ $('close-help').onclick=closeHelp;
 helpDialog.addEventListener('cancel',e=>{e.preventDefault();closeHelp();});
 // All feedback is local: no audio downloads, analytics or network requests.
 let audioContext=null,lastTone=0,goalFlashUntil=0,goalFlashOwn=false;
-let previousBalls=[],sparks=[];
-const feedbackSettings={sound:false,haptics:false};
-try{const saved=JSON.parse(localStorage.getItem('rikoshet-feedback')||'{}');feedbackSettings.sound=saved.sound===true;feedbackSettings.haptics=saved.haptics===true;}catch{}
+let previousBalls=[],sparks=[],trails=[],lastTrailTime=-1,lastHP=[],closedAt={};
+const feedbackSettings={sound:false,haptics:false,reduced:matchMedia('(prefers-reduced-motion: reduce)').matches};
+try{const saved=JSON.parse(localStorage.getItem('rikoshet-feedback')||'{}');feedbackSettings.sound=saved.sound===true;feedbackSettings.haptics=saved.haptics===true;if(typeof saved.reduced==='boolean')feedbackSettings.reduced=saved.reduced;}catch{}
+const transition=document.createElement('div');transition.id='wave-transition';transition.setAttribute('role','status');document.querySelector('.board').append(transition);
+let transitionUntil=0;
+function waveTransition(text){transition.textContent=text;transitionUntil=performance.now()+1400;}
 function unlockAudio(){
   if(!feedbackSettings.sound)return;
   try{const Audio=window.AudioContext||window.webkitAudioContext;if(!Audio)return;audioContext ||= new Audio();if(audioContext.state==='suspended')audioContext.resume().catch(()=>{});}catch{}
@@ -48,9 +51,9 @@ function feedback(kind){
     osc.onended=()=>{osc.disconnect();gain.disconnect();};
   }catch{}
 }
-for(const [id,key] of [['sound-enabled','sound'],['haptics-enabled','haptics']]){
+for(const [id,key] of [['sound-enabled','sound'],['haptics-enabled','haptics'],['reduced-effects','reduced']]){
   $(id).checked=feedbackSettings[key];
-  $(id).onchange=()=>{feedbackSettings[key]=$(id).checked;try{localStorage.setItem('rikoshet-feedback',JSON.stringify(feedbackSettings));}catch{}unlockAudio();if(feedbackSettings[key])feedback('perfect');};
+  $(id).onchange=()=>{feedbackSettings[key]=$(id).checked;try{localStorage.setItem('rikoshet-feedback',JSON.stringify(feedbackSettings));}catch{}if(key==='reduced'){trails=[];sparks=[];return;}unlockAudio();if(feedbackSettings[key])feedback('perfect');};
 }
 try{$('help').open=localStorage.getItem('rikoshet-help-seen')!=='1';}catch{$('help').open=true;}
 $('help-done').onclick=()=>{$('help').open=false;if(helpDialog.open)closeHelp();try{localStorage.setItem('rikoshet-help-seen','1');}catch{}};
@@ -146,6 +149,7 @@ function updatePause(){
   $('pause-text').textContent=networkWaiting?'Ожидаем соединения с соперником':confirmExit?'Награда за незавершённую волну не начисляется':'Нажми «Продолжить», когда будешь готов';
 }
 function showResult(result){
+  waveTransition(result.reward?(result.won?'Волна пройдена · дальше волна '+profile.wave:'Волна завершена · попробуй снова'):'Возвращение в меню');
   profilePanel.open=false;
   confirmExit=false;updatePause();
   $('result').hidden=false;
@@ -250,11 +254,13 @@ const fitObserver=new ResizeObserver(fitArena);
 for(const el of [stage,cabinet.querySelector('footer'),cabinet.querySelector('.plate'),$('ability'),$('touchpad')])fitObserver.observe(el);
 function goalMark(x,y,angle,label,mine){
   ctx.save();ctx.translate(x,y);ctx.rotate(angle);
-    ctx.fillStyle=mine?'#ffb3a3':'#a4f7e2';ctx.textAlign='center';ctx.font='bold 30px Arial';
+    ctx.fillStyle=mine===null?'#b5c3c5':mine?'#ffb3a3':'#a4f7e2';ctx.textAlign='center';ctx.font='bold 30px Arial';
   ctx.fillText(label,0,0);ctx.restore();
 }
 let lastPerfect=0,flashUntil=0,lastGoalCount=0,eventUntil=0,lastBallCount=1;
 function resetFeedback(){
+  trails=[];lastTrailTime=-1;lastHP=[...(game?.hp||[])];closedAt={};
+  if(game?.solo)waveTransition('Волна '+game.wave+' · '+game.rules.name);else transitionUntil=0;
   previousBalls=[];sparks=[];goalFlashUntil=0;
   lastPerfect=0;flashUntil=0;lastGoalCount=game?.goalCount||0;
   lastBallCount=game?.balls.length||1;eventUntil=0;$('event').textContent='';
@@ -292,11 +298,21 @@ function arenaArt(layout){
 }
 function render(){
   const frameNow=performance.now();
+  transition.hidden=frameNow>=transitionUntil || Boolean(game?.paused);
+  if(!game || game.paused || feedbackSettings.reduced)trails=[];
+  else if(game.t-lastTrailTime>=.015 || lastTrailTime<0){
+    game.balls.forEach((b,i)=>{
+      let points=trails[i]||[];const old=points.at(-1);
+      if(b.heldUntil>game.t || old && Math.hypot(b.x-old.x,b.y-old.y)>90)points=[];
+      points.push({x:b.x,y:b.y,t:game.t});trails[i]=points.filter(p=>game.t-p.t<.12).slice(-8);
+    });trails.length=game.balls.length;lastTrailTime=game.t;
+  }
+  if(game?.solo){game.hp.forEach((hp,i)=>{if(hp<=0 && lastHP[i]>0)closedAt[i]=game.t;});lastHP=[...game.hp];}
   if(game && !game.paused){
     game.balls.forEach((b,i)=>{
       const old=previousBalls[i];
       if(old && Math.hypot(b.x-old.x,b.y-old.y)<100 && b.vx*old.vx+b.vy*old.vy<0){
-        sparks.push({x:b.x,y:b.y,until:frameNow+260});feedback('bounce');
+        if(!feedbackSettings.reduced)sparks.push({x:b.x,y:b.y,until:frameNow+260});feedback('bounce');
       }
     });
     previousBalls=game.balls.map(b=>({...b}));
@@ -310,10 +326,16 @@ function render(){
   }
   const pads=game?.pads||Array.from({length:4},()=>({x:500}));
   pads.forEach((p,i)=>{
-    if(game?.solo && game.hp[i]<=0)return;
     ctx.save();if(i===1){ctx.translate(0,1000);ctx.scale(1,-1);}
     if(i===2){ctx.translate(1000,0);ctx.rotate(Math.PI/2);ctx.scale(1,1);}
     if(i===3)ctx.transform(0,1,1,0,0,0);
+    if(game?.solo && game.hp[i]<=0){
+      const amount=feedbackSettings.reduced?1:Math.min(1,(game.t-(closedAt[i]??game.t-.35))/.35);
+      ctx.fillStyle='#111d22';ctx.fillRect(304,980,392,20);
+      ctx.fillStyle='#7d8990';ctx.fillRect(310,982,190*amount,18);ctx.fillRect(690-190*amount,982,190*amount,18);
+      ctx.strokeStyle='#c5d3d8';ctx.lineWidth=3;ctx.strokeRect(310,982,380,18);
+      ctx.restore();return;
+    }
     const mine=i===(game?seat:0);
     const skin=cosmetics.find(item=>item.id===(game?game.skins?.[i]:profile?.skin))||cosmetics[0];
     // Goals are recessed openings with a thin net and posts; paddles are solid raised objects.
@@ -333,6 +355,10 @@ function render(){
     for(const offset of [-9,0,9]){ctx.beginPath();ctx.moveTo(p.x+offset,962);ctx.lineTo(p.x+offset,974);ctx.stroke();}
     ctx.restore();
   });
+  for(const points of trails){
+    ctx.lineCap='round';ctx.lineWidth=9;
+    for(let i=1;i<points.length;i++){ctx.strokeStyle='rgba(180,233,226,'+(i/points.length*.3)+')';ctx.beginPath();ctx.moveTo(points[i-1].x,points[i-1].y);ctx.lineTo(points[i].x,points[i].y);ctx.stroke();}
+  }ctx.lineCap='butt';
   for(const b of game?.balls||[{x:545,y:614}]){
     if(game && b.powerUntil>game.t){
       ctx.strokeStyle='#ffcf76';ctx.lineWidth=5;ctx.beginPath();ctx.arc(b.x,b.y,23,0,Math.PI*2);ctx.stroke();
@@ -342,9 +368,12 @@ function render(){
   ctx.restore();
   goalMark(500,913,0,'▼ СВОИ ВОРОТА',true);
   if(!game?.solo || game.hp[1]>0)goalMark(500,98,0,'▲ ЗАБИВАЙ',false);
+  else goalMark(500,98,0,'ЗАКРЫТО',null);
   if(!game || game.solo){
     if(!game || game.hp[2]>0)goalMark(98,500,-Math.PI/2,'▲ ЗАБИВАЙ',false);
+    else goalMark(98,500,-Math.PI/2,'ЗАКРЫТО',null);
     if(!game || game.hp[3]>0)goalMark(902,500,Math.PI/2,'▲ ЗАБИВАЙ',false);
+    else goalMark(902,500,Math.PI/2,'ЗАКРЫТО',null);
   }
   const pad=game?.pads[seat];
   if(game?.solo){
@@ -367,7 +396,7 @@ function render(){
   if(game && game.balls.length>lastBallCount){
     lastBallCount=game.balls.length;announce('Мультибол · '+lastBallCount+' шара','good');feedback('multi');
   }
-  if(game && !game.paused && frameNow<goalFlashUntil){
+  if(game && !game.paused && !feedbackSettings.reduced && frameNow<goalFlashUntil){
     ctx.globalAlpha=(goalFlashUntil-frameNow)/650;ctx.strokeStyle=goalFlashOwn?'#ff855f':'#8affd5';ctx.lineWidth=18;ctx.strokeRect(9,9,982,982);ctx.globalAlpha=1;
   }
   $('event').classList.toggle('visible',performance.now()<eventUntil && !game?.paused);
