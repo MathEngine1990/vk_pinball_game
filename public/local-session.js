@@ -25,7 +25,7 @@ async function synchronize(action='sync'){
   }
 }
 function endLocal(finished){
-  if(!game)return;
+  if(!game || !game.solo)return;
   const won=finished && game.winner===0;
   const earned=finished?rewards(game,0):{xp:0,shards:0,wave:0};
   const wave=game.wave;
@@ -50,7 +50,7 @@ function send(message){
 }
 function pauseSession(paused){if(game){game.paused=paused;resetInput();updatePause();}}
 async function start(type){
-  if(type!=='solo' || game || saving || !online)return;
+  if(type!=='solo' || game || inRoom || saving || !online)return;
   await synchronize();
   if(saveStatus?.kind==='conflict'){$('hint').textContent='Выбери сохранение внизу меню, затем начни волну.';return;}
   game=arena(true,profile.wave);game.skins=[profile.skin];target=500;
@@ -74,7 +74,7 @@ async function connect(){
   let previous=performance.now(),accumulated=0;
   function simulate(now){
     const elapsed=Math.min(.1,(now-previous)/1000);previous=now;
-    if(!game || game.paused || document.hidden)accumulated=0;
+    if(!game || !game.solo || game.paused || document.hidden)accumulated=0;
     else{accumulated+=elapsed;while(accumulated>=1/60 && game){accumulated-=1/60;step(game,1/60);if(game.winner!==null)endLocal(true);}}
     requestAnimationFrame(simulate);
   }

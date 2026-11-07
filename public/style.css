@@ -189,3 +189,9 @@ footer { flex-wrap: wrap; font-size: 11px; min-height: 24px; }
 #purchase-confirm button { margin: 6px 4px 0 0; }
 .stats button { font-size: 12px; width: 100%; margin-top: 5px; }
 #save-conflict { padding: 8px; border: 1px solid #ffc08a; border-radius: 7px; }
+#peer-entry { width: 100%; margin: 7px 0; }
+#peer-panel { padding: 10px; border: 1px solid #79bba1; border-radius: 8px; font-size: 12px; }
+#peer-panel p { margin: 7px 0; }
+#peer-panel button { width: 100%; margin-top: 6px; font-size: 12px; }
+#peer-panel textarea { box-sizing: border-box; width: 100%; min-width: 0; resize: vertical; max-height: 160px; padding: 8px; font: 12px monospace; color: #e3f5e8; background: #101914; border: 1px solid #526354; border-radius: 6px; }
+#peer-start { background: #ffab72; color: #201a14; }

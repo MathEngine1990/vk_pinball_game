@@ -5,6 +5,18 @@
 <p id="hint" role="status">Защищайте свои ворота. Направляйте шар краем отражателя.</p>
 <div id="menu"><section id="wave-preview"><b id="wave-title"></b><p id="wave-description"></p><small>Защити свои ворота. Победи всех или сохрани больше прочности за 150 секунд. Ничья — в твою пользу.</small></section><button id="solo">Продолжить волну <strong>↗</strong></button><button id="create">Создать дуэль <strong>＋</strong></button><form id="join"><input id="code" maxlength="8" placeholder="Код комнаты" aria-label="Код комнаты" required><button>Войти</button></form></div>
 <section id="result" hidden aria-live="polite"><b id="result-title"></b><p id="result-reward"></p></section>
+<button id="peer-entry" hidden>Дуэль с другом · обмен кодами</button>
+<section id="peer-panel" hidden>
+<b>Прямая дуэль 1 на 1</b><p>Хозяин рассчитывает матч. Без рейтинга и наград. Лучше пробовать в одной Wi-Fi-сети: через разные сети подключение может не получиться. Серверов-посредников нет.</p>
+<p>1. Хозяин создаёт приглашение и отправляет код другу.<br>2. Друг вставляет его, создаёт ответ и отправляет ответ хозяину.<br>3. Хозяин принимает ответ и начинает матч.</p>
+<small>Коды действуют 30 минут. Передавай их только другу: они содержат данные сетевого соединения. При прямой связи соперник может узнать твой IP.</small>
+<p id="peer-status" role="status">Выбери действие. Оставляй игру открытой во время обмена кодами.</p>
+<label for="peer-input">Код от друга</label><textarea id="peer-input" maxlength="100000" rows="3" placeholder="Вставь полный код RK1.…" spellcheck="false" autocapitalize="off"></textarea>
+<div id="peer-actions"><button id="peer-host">Я хозяин · создать приглашение</button><button id="peer-join">Я гость · создать ответ</button></div>
+<button id="peer-apply" hidden>Я хозяин · принять ответ друга</button>
+<div id="peer-output-box" hidden><label for="peer-output">Твой код — отправь другу целиком</label><textarea id="peer-output" rows="3" readonly spellcheck="false"></textarea><button id="peer-copy">Скопировать код</button></div>
+<button id="peer-start" hidden>Начать матч</button><button id="peer-cancel">Отмена / закрыть дуэль</button>
+</section>
 <section id="online-menu"><button id="find">Найти соперника</button><details id="ranking"><summary>Рейтинг игроков</summary><button id="refresh-ranking">Обновить рейтинг</button><div id="rank-list">Рейтинговые матчи учитываются после поиска соперника. Дуэли с друзьями не меняют рейтинг.</div></details></section>
 <section id="queue-status" hidden role="status"><b>Поиск соперника…</b><p>Чем дольше поиск, тем шире диапазон рейтинга.</p><button id="cancel-search">Отменить поиск</button></section>
 <details id="shop"><summary>Оформление отражателя</summary><p>Только внешний вид. Скорость, размер и сила удара одинаковые.</p><div id="shop-items"></div><p id="purchase-confirm" hidden><span id="purchase-text"></span><button id="purchase-yes">Купить</button><button id="purchase-no">Отмена</button></p></details>

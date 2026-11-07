@@ -22,7 +22,13 @@ const scripts = [
   (await read('catalog.js')).replace(/^export /gm,''),
   (await read('public/progress-store.js')).replace(/^export /gm,''),
   session,
-  'const networkMode=false; const {send,start,connect,pauseSession,endLocal}=localSession;',
+  await read('public/peer-session.js'),
+  `const networkMode=false;
+const send=m=>peerSession.active()?peerSession.send(m):localSession.send(m);
+const start=type=>localSession.start(type);
+const connect=()=>localSession.connect();
+const pauseSession=paused=>peerSession.active()?peerSession.pause(paused):localSession.pauseSession(paused);
+const endLocal=finished=>localSession.endLocal(finished);`,
   game
 ];
 const version = createHash('sha256').update([template, css, ...scripts].join('\n')).digest('hex').slice(0, 12);
@@ -54,6 +60,7 @@ const sourceFiles=[
   'public/local-session.js','public/network-session.js','scripts/build.mjs','scripts/check-browser.mjs'
   ,'catalog.js','public/session-router.js','public/runtime-config.js'
   ,'public/progress-store.js','progress-store.test.js'
+  ,'public/peer-session.js','scripts/check-peer.mjs'
 ];
 for (const source of sourceFiles) {
   const destination=path.join(root,'Для GitHub',source);

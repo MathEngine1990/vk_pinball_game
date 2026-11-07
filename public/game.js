@@ -6,9 +6,11 @@ function controls(active){
   inRoom=active;$('menu').hidden=active;$('playing').hidden=!active;
   $('online-menu').hidden=active || !networkMode;$('shop').hidden=active;
   $('find').disabled=!online;
+  $('peer-entry').hidden=active || networkMode;$('peer-entry').disabled=!online;
+  if(active && (game || typeof peerSession==='undefined' || !peerSession.active()))$('peer-panel').hidden=true;
   $('hit').disabled=!game;document.body.classList.toggle('match',active);
   if(active)$('result').hidden=true;
-  $('pause').hidden=!game?.solo;
+  $('pause').hidden=!game?.solo && !(typeof peerSession!=='undefined' && peerSession.active() && game);
   $('touchpad').hidden=!game || $('scheme').value!=='thumb';
   document.querySelectorAll('#menu button').forEach(b=>b.disabled=!online);
   updatePause();
@@ -63,7 +65,7 @@ function resetInput(){
 }
 function suspendGame(){
   resetInput();
-  if(game?.solo)pauseSession(true);
+  if(game?.solo || (typeof peerSession!=='undefined' && peerSession.active()))pauseSession(true);
 }
 function updatePause(){
   const visible=Boolean(game && (game.paused || networkWaiting));
@@ -146,7 +148,7 @@ for(const surface of [table,$('touchpad')]){
 }
 const keys=new Set();
 onkeydown=e=>{
-  if(!game || e.target.matches('select,input,button,summary'))return;
+  if(!game || e.target.matches('select,input,textarea,button,summary'))return;
   if(e.code==='Escape' && game.solo){e.preventDefault();confirmExit=false;pauseSession(!game.paused);return;}
   if(game.paused || networkWaiting)return;
   if(['ArrowLeft','ArrowRight','Space'].includes(e.code)){e.preventDefault();keys.add(e.code);if(e.code==='Space'&&!e.repeat)requestHit();}
@@ -268,4 +270,5 @@ function render(){
   $('hud').textContent=!game?'ВОЛНА '+String(profile?.wave||1).padStart(2,'0'):game.solo?'Волна '+game.wave+' · Прочность '+game.hp[0]+' · '+Math.ceil(150-game.t)+' с':game.score[seat]+' : '+game.score[1-seat]+' · '+(game.t<120?Math.ceil(120-game.t)+' с':'Овертайм');
   requestAnimationFrame(render);
 }
+if(typeof peerSession!=='undefined')peerSession.init();
 connect();render();
