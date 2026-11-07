@@ -112,6 +112,22 @@ try {
     await evaluate('game.hp[1]=0');await delay(400);
     assert.ok(await evaluate('lastHP[1]===0 && Number.isFinite(closedAt[1])'),'Eliminated goal closes visually');
     await screenshot(entry+'-closed-goal');
+    await evaluate("$('banner-mode').value='preview';$('banner-mode').onchange()");
+    await delay(400);
+    assert.ok(await evaluate('!bannerPreview.hidden'),'Preview appears in spare bottom space');
+    assert.ok(await evaluate('bannerPreview.getBoundingClientRect().top>=cabinet.getBoundingClientRect().bottom+24'),'Preview does not overlap controls');
+    await screenshot(entry+'-banner-bottom');
+    if(entry==='web'){
+      await resize(1280,800);await delay(400);
+      assert.ok(await evaluate("!bannerPreview.hidden && bannerPreview.classList.contains('side') && bannerPreview.getBoundingClientRect().right+24<=cabinet.getBoundingClientRect().left"),'Desktop banner is left of the right-aligned arena');
+      await screenshot('web-banner-left');
+    }
+    await resize(568,320);await delay(400);
+    assert.ok(await evaluate('bannerPreview.hidden'),'No preview in cramped landscape');
+    await resize(390,844);await delay(400);
+    await evaluate("bannerPreview.querySelector('button').click()");await delay(400);
+    assert.ok(await evaluate('bannerPreview.hidden'),'Closed preview does not reopen in same match');
+    await evaluate("$('banner-mode').value='off';$('banner-mode').onchange()");
     await evaluate("$('reduced-effects').checked=true;$('reduced-effects').onchange()");await delay(40);
     assert.ok(await evaluate('trails.length===0 && sparks.length===0'),'Reduced mode removes decorative trails and particles');
     await evaluate("$('reduced-effects').checked=false;$('reduced-effects').onchange()");
@@ -225,6 +241,7 @@ try {
   assert.equal(await evaluate('JSON.parse(localStorage.getItem("mock-vk-cloud")).profile.wave'),2);
   await evaluate("localStorage.removeItem('rikoshet-vk-123-42')");
   await call('Page.reload');await delay(400);
+  for(let attempt=0;attempt<60 && !await evaluate("typeof profile!=='undefined' && typeof online!=='undefined' && online");attempt++)await delay(50);
   assert.equal(await evaluate('profile.wave'),2,'Cloud restores without the device cache');
   await evaluate("window.failCloud=true;start('solo')");await delay(100);
   await evaluate('game.hp=[8,0,0,0]');await delay(150);

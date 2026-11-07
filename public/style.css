@@ -138,6 +138,11 @@ footer { flex-wrap: wrap; font-size: 11px; min-height: 24px; }
 #event.visible { opacity: 1; }
 #event[data-tone=bad] { background: #762d21eb; }
 #wave-transition { position:absolute; top:14%; left:10%; right:10%; padding:8px; border:1px solid #9ea981; border-radius:8px; background:#12281fea; color:#ffe0aa; text-align:center; font-size:clamp(10px,2vw,15px); pointer-events:none; }
+#banner-preview { position:fixed; bottom:0; left:50%; transform:translateX(-50%); z-index:3; display:flex; flex-direction:column; justify-content:center; align-items:center; gap:8px; padding:16px; border:2px dashed #a5b890; border-radius:8px; background:#1b3028; color:#ebdfbf; text-align:center; }
+#banner-preview.side { left:0; transform:none; }
+#banner-preview button { position:absolute; top:3px; right:3px; min-height:28px; padding:2px 8px; }
+#banner-status { font-size:12px; overflow-wrap:anywhere; }
+body.match.desktop-arena .stage { justify-items:end; }
 @media (max-width:740px) and (orientation:portrait) {
   header { padding: 0 10px; }
   header b { font-size: 16px; }

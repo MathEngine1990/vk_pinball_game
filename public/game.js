@@ -415,5 +415,43 @@ function render(){
   $('hud').textContent=!game?'ВОЛНА '+String(profile?.wave||1).padStart(2,'0'):game.solo?'Волна '+game.wave+' · Прочность '+game.hp[0]+' · '+Math.ceil(150-game.t)+' с':game.score[seat]+' : '+game.score[1-seat]+' · '+(game.t<120?Math.ceil(120-game.t)+' с':'Овертайм');
   requestAnimationFrame(render);
 }
+// Explicit local test setting: no advertising in the menu or outside VK.
+const bannerPreview=document.createElement('aside');bannerPreview.id='banner-preview';bannerPreview.hidden=true;
+bannerPreview.innerHTML='<button aria-label="Закрыть макет">×</button><b>МЕСТО ДЛЯ БАННЕРА</b><small>Макет · не реклама · без дохода</small>';document.body.append(bannerPreview);
+let bannerPreviewClosed=null;
+bannerPreview.querySelector('button').onclick=()=>{bannerPreviewClosed=game;bannerPreview.hidden=true;};
+const desktopAds=()=>view==='web' && innerWidth>=900;
+function bannerArea(){
+  const rect=cabinet.getBoundingClientRect(),viewport=window.visualViewport;
+  const bottom=Math.min(innerHeight,viewport?viewport.height+viewport.offsetTop:innerHeight);
+  return {side:desktopAds(),gap:desktopAds()?rect.left:bottom-rect.bottom,width:innerWidth,height:bottom-gameHeader.getBoundingClientRect().bottom-16};
+}
+const bannerVisible=()=>Boolean(game && !game.paused && !document.hidden && !helpDialog.open);
+const inVK=bridge && (bridge.isEmbedded?.() || new URLSearchParams(launch).has('vk_app_id'));
+const bannerController=typeof createBannerController==='function'?createBannerController({sdk:inVK?bridge:null,measure:bannerArea,getMatch:()=>game,isVisible:bannerVisible,onStatus:text=>$('banner-status').textContent=text}):null;
+try{const saved=localStorage.getItem('rikoshet-banner-mode');if(['off','preview','vk'].includes(saved))$('banner-mode').value=saved;}catch{}
+function changeBannerMode(){
+  const mode=$('banner-mode').value;
+  try{localStorage.setItem('rikoshet-banner-mode',mode);}catch{}
+  bannerPreviewClosed=null;bannerController?.setMode(mode);
+  if(mode!=='vk')$('banner-status').textContent=mode==='preview'?'Макет включён: начни матч. Реальная реклама не запрашивается.':'Баннер выключен.';
+}
+$('banner-mode').onchange=changeBannerMode;
+function updateBanner(){
+  document.body.classList.toggle('desktop-arena',desktopAds());
+  const area=bannerArea(),mode=$('banner-mode').value;
+  const visible=mode==='preview' && bannerVisible() && game!==bannerPreviewClosed && !bannerController?.getState().shown && area.gap>=(area.side?200:180);
+  bannerPreview.hidden=!visible;
+  if(visible){
+    bannerPreview.classList.toggle('side',area.side);
+    bannerPreview.style.width=(area.side?Math.min(240,area.gap-24):Math.min(600,area.width))+'px';
+    bannerPreview.style.height=(area.side?Math.min(400,area.height):100)+'px';
+  }
+  void bannerController?.tick();
+}
+changeBannerMode();setInterval(updateBanner,300);
+addEventListener('resize',()=>{bannerPreview.hidden=true;void bannerController?.tick();});
+addEventListener('pagehide',()=>{bannerPreview.hidden=true;bannerController?.setMode('off');});
+addEventListener('pageshow',changeBannerMode);
 if(typeof peerSession!=='undefined')peerSession.init();
 connect();render();

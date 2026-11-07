@@ -23,6 +23,7 @@ const scripts = [
   (await read('public/progress-store.js')).replace(/^export /gm,''),
   session,
   await read('public/peer-session.js'),
+  (await read('public/banner-ads.js')).replace(/^export /gm,''),
   `const networkMode=false;
 const send=m=>peerSession.active()?peerSession.send(m):localSession.send(m);
 const start=type=>localSession.start(type);
@@ -55,6 +56,7 @@ for (const name of ['index.html', 'web.html', 'mobile.html']) {
 await fs.writeFile(path.join(output, '.nojekyll'), '');
 // Keep the earlier source handoff usable, while root files remain authoritative.
 const sourceFiles=[
+  'public/banner-ads.js','banner-ads.test.js',
   'package.json','package-lock.json','README.md','.gitignore','server.js','physics.js','arena.test.js',
   'public/index.html','public/game.js','public/style.css','public/platform.js',
   'public/local-session.js','public/network-session.js','scripts/build.mjs','scripts/check-browser.mjs'
