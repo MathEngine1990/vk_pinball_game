@@ -34,6 +34,8 @@ for(const [id,key] of [['sound-enabled','sound'],['haptics-enabled','haptics']])
 try{$('help').open=localStorage.getItem('rikoshet-help-seen')!=='1';}catch{$('help').open=true;}
 $('help-done').onclick=()=>{$('help').open=false;try{localStorage.setItem('rikoshet-help-seen','1');}catch{}};
 function controls(active){
+  $('ability').hidden=!game?.solo;
+  if(active){$('result-summary').hidden=true;$('result-level').hidden=true;}
   inRoom=active;$('menu').hidden=active;$('playing').hidden=!active;
   $('online-menu').hidden=active || !networkMode;$('shop').hidden=active;
   $('find').disabled=!online;
@@ -47,9 +49,12 @@ function controls(active){
   updatePause();
 }
 function progress(p){
-  profile=p;let xp=p.xp,l=1,cost=70;
-  while(xp>=cost){xp-=cost;l++;cost=70+18*(l-1)+2*(l-1)**2;}
+  profile=p;const {xp,level:l,cost,remaining}=levelProgress(p.xp);
   $('stats').textContent='Уровень '+l+' · Опыт '+xp+'/'+cost+' · Осколки '+p.shards;
+  $('level-title').textContent='Уровень '+l+' · '+xp+'/'+cost+' опыта · '+p.shards+' осколков';
+  $('xp-progress').max=cost;$('xp-progress').value=xp;
+  const next=cosmetics.find(item=>!p.owned.includes(item.id));
+  $('next-unlock').textContent='До уровня '+(l+1)+': '+remaining+' опыта. '+(next?(p.shards>=next.price?'Доступно оформление «'+next.name+'» в магазине.':'Цель: «'+next.name+'» · ещё '+(next.price-p.shards)+' осколков.'):'Все оформления собраны!');
   $('solo').firstChild.textContent='Волна '+p.wave+' · играть ';
   const rules=waveRules(p.wave);
   $('wave-title').textContent=rules.name+' · Цикл '+rules.cycle;
@@ -82,6 +87,14 @@ function renderRanking(rows){
   for(const row of rows){const line=document.createElement('p');line.textContent=row.place+'. '+(row.you?'Ты':row.name)+' · '+row.mmr+' · Побед '+row.wins+'/'+row.played;$('rank-list').append(line);}
 }
 $('solo').onclick=e=>{e.currentTarget.blur();start('solo');};
+const difficultyNames={easy:'Легко',normal:'Обычно',hard:'Сложно'};
+try{const saved=localStorage.getItem('rikoshet-difficulty');if(difficultyNames[saved])$('difficulty').value=saved;}catch{}
+function explainDifficulty(){
+  $('difficulty-note').textContent=({'easy':'Боты медленнее и чаще ошибаются.','normal':'Обычная скорость и точность ботов.','hard':'Боты быстрее и точнее.'})[$('difficulty').value]+' Награды одинаковы. Выбор сохраняется на этом устройстве.';
+}
+explainDifficulty();
+$('difficulty').onchange=()=>{explainDifficulty();try{localStorage.setItem('rikoshet-difficulty',$('difficulty').value);}catch{}};
+$('magnet').onclick=()=>{if(game?.solo && !game.paused)send({type:'magnet'});};
 $('create').onclick=e=>{e.currentTarget.blur();start('create');};
 $('join').onsubmit=e=>{e.preventDefault();start('join');};
 function requestHit(){
@@ -112,6 +125,12 @@ function showResult(result){
   $('result').hidden=false;
   $('result-title').textContent=!result.reward?'Волна прервана':result.won?'Победа!':'Раунд завершён';
   const earned=result.earned;
+  if(result.summary){
+    const s=result.summary,after=levelProgress(profile.xp),before=levelProgress(s.beforeXP);
+    $('result-summary').hidden=false;$('result-level').hidden=false;
+    $('result-summary').textContent='Волна '+result.wave+' · '+(difficultyNames[s.difficulty]||'Обычно')+' · '+s.seconds+' с. Голы после твоего отражения: '+s.goals+' · Пропущено: '+s.missed+' · Точные удары: '+s.perfect+'.';
+    $('result-level').textContent=(after.level>before.level?'Новый уровень '+after.level+'! ':'Уровень '+after.level+'. ')+'До следующего: '+after.remaining+' опыта.';
+  }
   $('result-reward').textContent=result.reward && earned?
     '+'+earned.xp+' опыта · +'+earned.shards+' осколков'+(earned.mmr?' · Рейтинг '+(earned.mmr>0?'+':'')+earned.mmr:'')+(result.won && earned.wave?' · Следующая волна открыта':''):
     'Можно попробовать снова.';
@@ -291,6 +310,14 @@ function render(){
     if(!game || game.hp[3]>0)goalMark(902,500,Math.PI/2,'▲ ЗАБИВАЙ',false);
   }
   const pad=game?.pads[seat];
+  if(game?.solo){
+    const held=game.balls.some(b=>b.heldUntil>game.t),armed=game.magnetUntil>game.t;
+    $('energy').value=game.energy;
+    $('magnet').disabled=game.paused || game.energy<100 || armed || held;
+    $('magnet').textContent=held?'Шар пойман · запуск через 1 с':armed?'Магнит · '+Math.ceil(game.magnetUntil-game.t)+' с':game.energy>=100?'Магнит готов · включить':'Магнит · '+game.energy+'/100';
+    $('energy-note').textContent=held?'Двигай отражатель — шар следует за ним.':armed?'Лови ближайший шар отражателем.':'Точный удар: +25 энергии';
+    if(armed || held){ctx.strokeStyle='#a5cfff';ctx.lineWidth=6;ctx.beginPath();ctx.arc(pad.x,955,100,Math.PI,2*Math.PI);ctx.stroke();}
+  }
   if(pad && pad.perfect>lastPerfect){flashUntil=performance.now()+550;announce('Точный удар!','good');feedback('perfect');}
   lastPerfect=pad?.perfect||0;
   if(!game)flashUntil=0;

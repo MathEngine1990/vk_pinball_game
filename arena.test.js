@@ -4,7 +4,39 @@ import {spawn} from 'node:child_process';
 import {once} from 'node:events';
 import {createHmac} from 'node:crypto';
 import {WebSocket} from 'ws';
-import {arena,step,input,rewards,waveRules,bumpers} from './physics.js';
+import {arena,step,input,rewards,waveRules,bumpers,activateMagnet} from './physics.js';
+import {levelProgress} from './catalog.js';
+
+test('level progress crosses multiple levels without losing experience',()=>{
+  assert.deepEqual(levelProgress(69),{level:1,xp:69,cost:70,remaining:1});
+  assert.deepEqual(levelProgress(70+90+4),{level:3,xp:4,cost:114,remaining:110});
+});
+test('difficulty changes bots only, with equal rewards and unchanged duel rules',()=>{
+  const easy=arena(true,8,'easy'),normal=arena(true,8),hard=arena(true,8,'hard');
+  assert.ok(easy.rules.botSpeed<normal.rules.botSpeed && normal.rules.botSpeed<hard.rules.botSpeed);
+  assert.ok(easy.rules.botReaction>hard.rules.botReaction && easy.rules.botError>hard.rules.botError);
+  normal.winner=0;
+  for(const g of [easy,normal,hard]){g.winner=0;assert.equal(g.rules.speed,normal.rules.speed);assert.deepEqual(rewards(g,0),rewards(normal,0));}
+  assert.equal(arena(false,8,'hard').rules,null);
+});
+test('magnet needs energy, captures one ball, freezes on pause and releases safely',()=>{
+  const g=arena(true);assert.equal(activateMagnet(g),false);
+  for(let i=0;i<2;i++){
+    g.pads[0].hit=g.t;g.balls=[{x:500,y:948,vx:0,vy:360}];step(g,1/60);
+  }
+  assert.equal(g.energy,100);assert.equal(g.pads[0].perfect,2);
+  assert.equal(activateMagnet(g),true);assert.equal(g.energy,0);assert.equal(activateMagnet(g),false);
+  g.balls=[{x:500,y:948,vx:0,vy:360}];step(g,1/60);
+  assert.ok(g.balls[0].heldUntil>g.t);assert.equal(g.balls[0].vy,0);
+  g.paused=true;const t=g.t;step(g,2);assert.equal(g.t,t);assert.equal(activateMagnet(g),false);
+  g.paused=false;input(g,0,700,false);step(g,.1);assert.equal(g.balls[0].x,g.pads[0].x);
+  for(let i=0;i<65;i++)step(g,1/60);
+  assert.equal(g.balls[0].heldUntil,0);assert.ok(g.balls[0].vy<0);
+  const duel=arena(false);duel.energy=100;assert.equal(activateMagnet(duel),false);
+  g.energy=100;assert.equal(activateMagnet(g),true);g.balls=[{x:500,y:500,vx:0,vy:0}];
+  for(let i=0;i<241;i++)step(g,1/60);
+  assert.ok(g.magnetUntil<g.t);assert.equal(g.balls[0].heldUntil,undefined);
+});
 
 test('wave variants have matching geometry, schedules and bounded difficulty',()=>{
   for(const invalid of [0,-1,NaN,Infinity,'2'])assert.deepEqual(waveRules(invalid),waveRules(1));

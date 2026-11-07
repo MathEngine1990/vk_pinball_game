@@ -195,3 +195,13 @@ footer { flex-wrap: wrap; font-size: 11px; min-height: 24px; }
 #peer-panel button { width: 100%; margin-top: 6px; font-size: 12px; }
 #peer-panel textarea { box-sizing: border-box; width: 100%; min-width: 0; resize: vertical; max-height: 160px; padding: 8px; font: 12px monospace; color: #e3f5e8; background: #101914; border: 1px solid #526354; border-radius: 6px; }
 #peer-start { background: #ffab72; color: #201a14; }
+progress { display: block; width: 100%; height: 9px; margin: 7px 0; accent-color: #ffbb71; }
+#ability { margin: 6px 0; }
+#magnet { width: 100%; border-color: #8bcfff; }
+#energy { accent-color: #8bcfff; }
+#energy-note, #difficulty-note { display: block; font-size: 12px; line-height: 1.4; }
+#next-unlock { margin: 5px 0; }
+#progress-overview { padding: 9px; border: 1px solid #627b67; border-radius: 8px; margin: 8px 0; font-size: 12px; }
+body.match #progress-overview { display: none; }
+#menu > .scheme, #difficulty-note { grid-column: 1 / -1; }
+#difficulty-note { margin: 2px 0 8px; }

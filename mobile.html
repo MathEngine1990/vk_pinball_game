@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="ru"><head><meta charset="utf-8"><meta name="rikoshet-release" content="f422fec3c09b"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Арена: Рикошет</title><style>
+<html lang="ru"><head><meta charset="utf-8"><meta name="rikoshet-release" content="63ae18da323c"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Арена: Рикошет</title><style>
 :root {
   color-scheme: dark;
   font: 15px Arial, sans-serif;
@@ -197,13 +197,25 @@ footer { flex-wrap: wrap; font-size: 11px; min-height: 24px; }
 #peer-panel button { width: 100%; margin-top: 6px; font-size: 12px; }
 #peer-panel textarea { box-sizing: border-box; width: 100%; min-width: 0; resize: vertical; max-height: 160px; padding: 8px; font: 12px monospace; color: #e3f5e8; background: #101914; border: 1px solid #526354; border-radius: 6px; }
 #peer-start { background: #ffab72; color: #201a14; }
+progress { display: block; width: 100%; height: 9px; margin: 7px 0; accent-color: #ffbb71; }
+#ability { margin: 6px 0; }
+#magnet { width: 100%; border-color: #8bcfff; }
+#energy { accent-color: #8bcfff; }
+#energy-note, #difficulty-note { display: block; font-size: 12px; line-height: 1.4; }
+#next-unlock { margin: 5px 0; }
+#progress-overview { padding: 9px; border: 1px solid #627b67; border-radius: 8px; margin: 8px 0; font-size: 12px; }
+body.match #progress-overview { display: none; }
+#menu > .scheme, #difficulty-note { grid-column: 1 / -1; }
+#difficulty-note { margin: 2px 0 8px; }
 
 </style></head>
 <body><header><b><i>◉</i> АРЕНА: РИКОШЕТ</b><span id="account" hidden></span></header>
 <main><section class="panel"><small>ПИНБОЛ • АРКАДА</small><h1>РИКОШЕТ<span>.</span></h1>
 <p id="hint" role="status">Защищайте свои ворота. Направляйте шар краем отражателя.</p>
-<div id="menu"><section id="wave-preview"><b id="wave-title"></b><p id="wave-description"></p><small>Защити свои ворота. Победи всех или сохрани больше прочности за 150 секунд. Ничья — в твою пользу.</small></section><button id="solo">Продолжить волну <strong>↗</strong></button><button id="create">Создать дуэль <strong>＋</strong></button><form id="join"><input id="code" maxlength="8" placeholder="Код комнаты" aria-label="Код комнаты" required><button>Войти</button></form></div>
-<section id="result" hidden aria-live="polite"><b id="result-title"></b><p id="result-reward"></p></section>
+<section id="result" hidden aria-live="polite"><b id="result-title"></b><p id="result-reward"></p><p id="result-summary" hidden></p><p id="result-level" hidden></p></section>
+<section id="progress-overview"><b id="level-title"></b><progress id="xp-progress" max="70" value="0" aria-label="Опыт до следующего уровня"></progress><p id="next-unlock"></p></section>
+<div id="menu"><section id="wave-preview"><b id="wave-title"></b><p id="wave-description"></p><small>Защити свои ворота. Победи всех или сохрани больше прочности за 150 секунд. Ничья — в твою пользу.</small></section><label class="scheme">Сложность ботов <select id="difficulty"><option value="easy">Легко</option><option value="normal" selected>Обычно</option><option value="hard">Сложно</option></select></label><p id="difficulty-note"></p><button id="solo">Продолжить волну <strong>↗</strong></button><button id="create">Создать дуэль <strong>＋</strong></button><form id="join"><input id="code" maxlength="8" placeholder="Код комнаты" aria-label="Код комнаты" required><button>Войти</button></form></div>
+
 <button id="peer-entry" hidden>Дуэль с другом · обмен кодами</button>
 <section id="peer-panel" hidden>
 <b>Прямая дуэль 1 на 1</b><p>Хозяин рассчитывает матч. Без рейтинга и наград. Лучше пробовать в одной Wi-Fi-сети: через разные сети подключение может не получиться. Серверов-посредников нет.</p>
@@ -220,7 +232,7 @@ footer { flex-wrap: wrap; font-size: 11px; min-height: 24px; }
 <section id="queue-status" hidden role="status"><b>Поиск соперника…</b><p>Чем дольше поиск, тем шире диапазон рейтинга.</p><button id="cancel-search">Отменить поиск</button></section>
 <details id="shop"><summary>Оформление отражателя</summary><p>Только внешний вид. Скорость, размер и сила удара одинаковые.</p><div id="shop-items"></div><p id="purchase-confirm" hidden><span id="purchase-text"></span><button id="purchase-yes">Купить</button><button id="purchase-no">Отмена</button></p></details>
 <div id="playing" hidden><button id="hit"><span id="hit-label">✦ Удар готов</span><span id="hit-meter"></span></button><button id="pause">Пауза</button><button id="leave">Выйти</button></div>
-<details id="help"><summary>Как играть · 3 подсказки</summary><p>1. Защищай оранжевые ворота снизу. Забивай в бирюзовые ворота с надписью «ЗАБИВАЙ».</p><p>2. В режиме «Одним пальцем» веди пальцем по площадке под полем. Край отражателя меняет угол отскока.</p><p>3. Отпусти палец прямо перед касанием шара: окно точного удара — 0,17 секунды, перезарядка — 0,8 секунды.</p><p>В волне у каждого 8 прочности. Продержись 150 секунд с наибольшей прочностью или выбей всех ботов. В дуэли — 7 голов либо преимущество после 120 секунд.</p><button id="help-done">Понятно</button></details>
+<div id="ability" hidden><button id="magnet">Магнит</button><progress id="energy" max="100" value="50" aria-label="Энергия магнита"></progress><small id="energy-note"></small></div><details id="help"><summary>Как играть · 3 подсказки</summary><p>1. Защищай оранжевые ворота снизу. Забивай в бирюзовые ворота с надписью «ЗАБИВАЙ».</p><p>2. В режиме «Одним пальцем» веди пальцем по площадке под полем. Край отражателя меняет угол отскока.</p><p>3. Отпусти палец прямо перед касанием шара: окно точного удара — 0,17 секунды, перезарядка — 0,8 секунды.</p><p>В волне у каждого 8 прочности. Продержись 150 секунд с наибольшей прочностью или выбей всех ботов. В дуэли — 7 голов либо преимущество после 120 секунд.</p><p>Магнит — только в волнах: начинаешь с 50 энергии, точный удар даёт 25. При 100 нажми «Магнит»: за 4 секунды поймай шар своим отражателем. Он удержится на 1 секунду и автоматически полетит вверх. Награды на всех сложностях одинаковы.</p><button id="help-done">Понятно</button></details>
 <details id="settings"><summary>Управление, звук и вибрация</summary>
 <label class="scheme">Звук <input id="sound-enabled" type="checkbox"></label>
 <label class="scheme">Вибрация при голе и точном ударе <input id="haptics-enabled" type="checkbox"></label>
@@ -312,10 +324,19 @@ function serve(speed=360) {
   const angle = (Math.floor(Math.random()*4)+0.2+Math.random()*0.6)*Math.PI/2;
   return {x:500,y:500,vx:speed*Math.cos(angle),vy:speed*Math.sin(angle)};
 }
-function arena(solo, wave=1) {
+function arena(solo, wave=1, difficulty='normal') {
   const rules = solo ? waveRules(wave) : null;
-  return {solo,wave,rules,t:0,paused:false,goalCount:0,lastGoal:null,balls:[serve(rules?.speed)],hp:[8,8,8,8],score:[0,0],winner:null,
+  difficulty=['easy','normal','hard'].includes(difficulty)?difficulty:'normal';
+  if(rules){
+    const factor=difficulty==='easy'?.75:difficulty==='hard'?1.2:1;
+    rules.botSpeed*=factor;rules.botError/=factor;rules.botReaction/=factor;
+  }
+  return {solo,wave,rules,difficulty,t:0,paused:false,energy:50,magnetUntil:0,playerGoals:0,goalCount:0,lastGoal:null,balls:[serve(rules?.speed)],hp:[8,8,8,8],score:[0,0],winner:null,
     pads:Array.from({length:solo?4:2},()=>({x:500,target:500,hit:-10,perfect:0,nextThink:0}))};
+}
+function activateMagnet(g){
+  if(!g.solo || g.paused || g.winner!==null || g.energy<100 || g.magnetUntil>g.t || g.balls.some(b=>b.heldUntil>g.t))return false;
+  g.energy-=100;g.magnetUntil=g.t+4;return true;
 }
 function input(g,i,x,hit) {
   if(g.paused || g.winner!==null) return;
@@ -331,18 +352,23 @@ function wall(g,b,i) {
   const depth=low?b[axis]:1000-b[axis], p=g.pads[i];
   const active=p && (!g.solo || g.hp[i]>0);
   if(active && depth<=48 && depth>=30 && Math.abs(b[along]-p.x)<=89) {
+    b.lastTouch=i;
+    if(g.solo && i===0 && g.magnetUntil>g.t){
+      g.magnetUntil=0;b.heldUntil=g.t+1;b.vx=0;b.vy=0;b.x=p.x;b.y=934;return;
+    }
     const angle=clamp((b[along]-p.x)/85,-1,1)*1.02;
     const perfect=g.t-p.hit<0.17;
     const speed=Math.min(740,Math.hypot(b.vx,b.vy)+(perfect?160:12));
-    if(perfect) {p.perfect++;b.powerUntil=g.t+0.5;}
+    if(perfect) {p.perfect++;b.powerUntil=g.t+0.5;if(g.solo && i===0)g.energy=Math.min(100,g.energy+25);}
     b[vel]=inward*Math.cos(angle)*speed;
     b[vertical?'vy':'vx']=Math.sin(angle)*speed;
   } else if(depth<=14) {
     if(active && Math.abs(b[along]-500)<190) {
       if(g.solo) g.hp[i]--; else g.score[1-i]++;
+      if(g.solo && i!==0 && b.lastTouch===0)g.playerGoals++;
       g.goalCount=(g.goalCount || 0)+1;
       g.lastGoal={side:i,t:g.t};
-      Object.assign(b,serve(g.rules?.speed),{powerUntil:0});
+      Object.assign(b,serve(g.rules?.speed),{powerUntil:0,lastTouch:null,heldUntil:0});
     } else { b[vel]*=-1; b[axis]=low?14:986; }
   }
 }
@@ -366,6 +392,11 @@ function step(g,dt) {
     p.x+=clamp(p.target-p.x,-limit,limit);
   });
   for(const b of g.balls) {
+    if(b.heldUntil){
+      b.x=g.pads[0].x;b.y=934;
+      if(g.t<b.heldUntil)continue;
+      b.heldUntil=0;b.vx=0;b.vy=-(rules?.speed || 360);b.lastTouch=0;
+    }
     b.x+=b.vx*dt; b.y+=b.vy*dt;
     for(const [x,y] of rules?.bumpers || bumpers) {
       const dx=b.x-x, dy=b.y-y, d=Math.hypot(dx,dy);
@@ -378,6 +409,7 @@ function step(g,dt) {
   }
   for(let i=0;i<g.balls.length;i++)for(const other of g.balls.slice(i+1)){
     const b=g.balls[i],dx=other.x-b.x,dy=other.y-b.y,d=Math.hypot(dx,dy);
+    if(b.heldUntil>g.t || other.heldUntil>g.t)continue;
     if(d===0 || d>=28)continue;
     const nx=dx/d,ny=dy/d,overlap=(28-d)/2;
     b.x-=nx*overlap;b.y-=ny*overlap;other.x+=nx*overlap;other.y+=ny*overlap;
@@ -418,6 +450,11 @@ const cosmetics = [
 ];
 function ratingDelta(rating,opponent,won){
   return Math.round(32*((won?1:0)-1/(1+10**((opponent-rating)/400))));
+}
+function levelProgress(total){
+  let xp=Math.max(0,Number.isFinite(total)?total:0),level=1,cost=70;
+  while(xp>=cost){xp-=cost;level++;cost=70+18*(level-1)+2*(level-1)**2;}
+  return {level,xp,cost,remaining:cost-xp};
 }
 
 </script>
@@ -538,10 +575,11 @@ function endLocal(finished){
   const won=finished && game.winner===0;
   const earned=finished?rewards(game,0):{xp:0,shards:0,wave:0};
   const wave=game.wave;
+  const summary={goals:game.playerGoals||0,missed:8-game.hp[0],perfect:game.pads[0].perfect,seconds:Math.floor(game.t),difficulty:game.difficulty,beforeXP:profile.xp};
   profile.xp+=earned.xp;profile.shards+=earned.shards;profile.wave+=earned.wave;
   if(finished)store.save(profile);
   game=null;resetInput();controls(false);progress(profile);
-  showResult({won,reward:finished,earned,wave});
+  showResult({won,reward:finished,earned,wave,summary});
   if(saveStatus)showSaveStatus(saveStatus);
   if(finished)void synchronize();
 }
@@ -555,6 +593,7 @@ function send(message){
   }
   if(!game)return;
   if(message.type==='input')input(game,0,message.x,message.hit);
+  if(message.type==='magnet' && activateMagnet(game)){announce('Магнит включён · поймай шар за 4 с','good');feedback('perfect');}
   if(message.type==='leave')endLocal(false);
 }
 function pauseSession(paused){if(game){game.paused=paused;resetInput();updatePause();}}
@@ -562,7 +601,7 @@ async function start(type){
   if(type!=='solo' || game || inRoom || saving || !online)return;
   await synchronize();
   if(saveStatus?.kind==='conflict'){$('hint').textContent='Выбери сохранение внизу меню, затем начни волну.';return;}
-  game=arena(true,profile.wave);game.skins=[profile.skin];target=500;
+  game=arena(true,profile.wave,$('difficulty').value);game.skins=[profile.skin];target=500;
   resetInput();resetFeedback();controls(true);
   $('hint').textContent='Защищай оранжевые ворота внизу. Забивай в три бирюзовых.';
   $('mode').textContent='ВОЛНА '+game.wave+' · '+game.rules.name;$('solo').blur();
@@ -828,6 +867,8 @@ for(const [id,key] of [['sound-enabled','sound'],['haptics-enabled','haptics']])
 try{$('help').open=localStorage.getItem('rikoshet-help-seen')!=='1';}catch{$('help').open=true;}
 $('help-done').onclick=()=>{$('help').open=false;try{localStorage.setItem('rikoshet-help-seen','1');}catch{}};
 function controls(active){
+  $('ability').hidden=!game?.solo;
+  if(active){$('result-summary').hidden=true;$('result-level').hidden=true;}
   inRoom=active;$('menu').hidden=active;$('playing').hidden=!active;
   $('online-menu').hidden=active || !networkMode;$('shop').hidden=active;
   $('find').disabled=!online;
@@ -841,9 +882,12 @@ function controls(active){
   updatePause();
 }
 function progress(p){
-  profile=p;let xp=p.xp,l=1,cost=70;
-  while(xp>=cost){xp-=cost;l++;cost=70+18*(l-1)+2*(l-1)**2;}
+  profile=p;const {xp,level:l,cost,remaining}=levelProgress(p.xp);
   $('stats').textContent='Уровень '+l+' · Опыт '+xp+'/'+cost+' · Осколки '+p.shards;
+  $('level-title').textContent='Уровень '+l+' · '+xp+'/'+cost+' опыта · '+p.shards+' осколков';
+  $('xp-progress').max=cost;$('xp-progress').value=xp;
+  const next=cosmetics.find(item=>!p.owned.includes(item.id));
+  $('next-unlock').textContent='До уровня '+(l+1)+': '+remaining+' опыта. '+(next?(p.shards>=next.price?'Доступно оформление «'+next.name+'» в магазине.':'Цель: «'+next.name+'» · ещё '+(next.price-p.shards)+' осколков.'):'Все оформления собраны!');
   $('solo').firstChild.textContent='Волна '+p.wave+' · играть ';
   const rules=waveRules(p.wave);
   $('wave-title').textContent=rules.name+' · Цикл '+rules.cycle;
@@ -876,6 +920,14 @@ function renderRanking(rows){
   for(const row of rows){const line=document.createElement('p');line.textContent=row.place+'. '+(row.you?'Ты':row.name)+' · '+row.mmr+' · Побед '+row.wins+'/'+row.played;$('rank-list').append(line);}
 }
 $('solo').onclick=e=>{e.currentTarget.blur();start('solo');};
+const difficultyNames={easy:'Легко',normal:'Обычно',hard:'Сложно'};
+try{const saved=localStorage.getItem('rikoshet-difficulty');if(difficultyNames[saved])$('difficulty').value=saved;}catch{}
+function explainDifficulty(){
+  $('difficulty-note').textContent=({'easy':'Боты медленнее и чаще ошибаются.','normal':'Обычная скорость и точность ботов.','hard':'Боты быстрее и точнее.'})[$('difficulty').value]+' Награды одинаковы. Выбор сохраняется на этом устройстве.';
+}
+explainDifficulty();
+$('difficulty').onchange=()=>{explainDifficulty();try{localStorage.setItem('rikoshet-difficulty',$('difficulty').value);}catch{}};
+$('magnet').onclick=()=>{if(game?.solo && !game.paused)send({type:'magnet'});};
 $('create').onclick=e=>{e.currentTarget.blur();start('create');};
 $('join').onsubmit=e=>{e.preventDefault();start('join');};
 function requestHit(){
@@ -906,6 +958,12 @@ function showResult(result){
   $('result').hidden=false;
   $('result-title').textContent=!result.reward?'Волна прервана':result.won?'Победа!':'Раунд завершён';
   const earned=result.earned;
+  if(result.summary){
+    const s=result.summary,after=levelProgress(profile.xp),before=levelProgress(s.beforeXP);
+    $('result-summary').hidden=false;$('result-level').hidden=false;
+    $('result-summary').textContent='Волна '+result.wave+' · '+(difficultyNames[s.difficulty]||'Обычно')+' · '+s.seconds+' с. Голы после твоего отражения: '+s.goals+' · Пропущено: '+s.missed+' · Точные удары: '+s.perfect+'.';
+    $('result-level').textContent=(after.level>before.level?'Новый уровень '+after.level+'! ':'Уровень '+after.level+'. ')+'До следующего: '+after.remaining+' опыта.';
+  }
   $('result-reward').textContent=result.reward && earned?
     '+'+earned.xp+' опыта · +'+earned.shards+' осколков'+(earned.mmr?' · Рейтинг '+(earned.mmr>0?'+':'')+earned.mmr:'')+(result.won && earned.wave?' · Следующая волна открыта':''):
     'Можно попробовать снова.';
@@ -1085,6 +1143,14 @@ function render(){
     if(!game || game.hp[3]>0)goalMark(902,500,Math.PI/2,'▲ ЗАБИВАЙ',false);
   }
   const pad=game?.pads[seat];
+  if(game?.solo){
+    const held=game.balls.some(b=>b.heldUntil>game.t),armed=game.magnetUntil>game.t;
+    $('energy').value=game.energy;
+    $('magnet').disabled=game.paused || game.energy<100 || armed || held;
+    $('magnet').textContent=held?'Шар пойман · запуск через 1 с':armed?'Магнит · '+Math.ceil(game.magnetUntil-game.t)+' с':game.energy>=100?'Магнит готов · включить':'Магнит · '+game.energy+'/100';
+    $('energy-note').textContent=held?'Двигай отражатель — шар следует за ним.':armed?'Лови ближайший шар отражателем.':'Точный удар: +25 энергии';
+    if(armed || held){ctx.strokeStyle='#a5cfff';ctx.lineWidth=6;ctx.beginPath();ctx.arc(pad.x,955,100,Math.PI,2*Math.PI);ctx.stroke();}
+  }
   if(pad && pad.perfect>lastPerfect){flashUntil=performance.now()+550;announce('Точный удар!','good');feedback('perfect');}
   lastPerfect=pad?.perfect||0;
   if(!game)flashUntil=0;

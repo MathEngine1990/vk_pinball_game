@@ -67,11 +67,18 @@ try {
       await call('Page.reload');await delay(350);
       assert.ok(await evaluate("!$('help').open && $('sound-enabled').checked && $('haptics-enabled').checked"),'Tutorial dismissal and feedback preferences persist');
       await evaluate("$('sound-enabled').checked=false;$('sound-enabled').onchange();$('haptics-enabled').checked=false;$('haptics-enabled').onchange()");
+      await evaluate("$('difficulty').value='easy';$('difficulty').onchange()");
+      await call('Page.reload');await delay(350);
+      assert.equal(await evaluate("$('difficulty').value"),'easy','Difficulty persists');
       const initialWave=await evaluate('profile.wave');
     assert.ok(await evaluate("$('wave-title').textContent.includes(waveRules(profile.wave).name)"),'Wave preview matches saved progression');
     await evaluate("$('solo').click()");
     await delay(100);
     assert.equal(await evaluate('game.wave'),initialWave);
+    assert.equal(await evaluate('game.difficulty'),'easy');
+    await evaluate('game.energy=100');await delay(40);
+    await evaluate("$('magnet').click()");
+    assert.ok(await evaluate('game.energy===0 && game.magnetUntil>game.t'),'Magnet UI spends energy and arms');
     assert.deepEqual(await evaluate('game.rules.bumpers'),await evaluate('waveRules(profile.wave).bumpers'));
     for(const [width,height] of [[320,568],[568,320],[390,844],[844,390],[720,720],[1280,720]]){
       await resize(width,height);
@@ -108,6 +115,7 @@ try {
     await delay(120);
     assert.ok(await evaluate("!game && !$('result').hidden"));
     assert.equal(await evaluate('profile.wave'),initialWave+1);
+    assert.ok(await evaluate("!$('result-summary').hidden && $('result-summary').textContent.includes('Точные удары') && !$('result-level').hidden && $('xp-progress').value>0"),'Result statistics and progression visible after save');
     const xp=await evaluate('profile.xp');
     await evaluate('endLocal(true)');
     assert.equal(await evaluate('profile.xp'),xp,'Reward cannot be granted twice');

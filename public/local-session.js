@@ -29,10 +29,11 @@ function endLocal(finished){
   const won=finished && game.winner===0;
   const earned=finished?rewards(game,0):{xp:0,shards:0,wave:0};
   const wave=game.wave;
+  const summary={goals:game.playerGoals||0,missed:8-game.hp[0],perfect:game.pads[0].perfect,seconds:Math.floor(game.t),difficulty:game.difficulty,beforeXP:profile.xp};
   profile.xp+=earned.xp;profile.shards+=earned.shards;profile.wave+=earned.wave;
   if(finished)store.save(profile);
   game=null;resetInput();controls(false);progress(profile);
-  showResult({won,reward:finished,earned,wave});
+  showResult({won,reward:finished,earned,wave,summary});
   if(saveStatus)showSaveStatus(saveStatus);
   if(finished)void synchronize();
 }
@@ -46,6 +47,7 @@ function send(message){
   }
   if(!game)return;
   if(message.type==='input')input(game,0,message.x,message.hit);
+  if(message.type==='magnet' && activateMagnet(game)){announce('Магнит включён · поймай шар за 4 с','good');feedback('perfect');}
   if(message.type==='leave')endLocal(false);
 }
 function pauseSession(paused){if(game){game.paused=paused;resetInput();updatePause();}}
@@ -53,7 +55,7 @@ async function start(type){
   if(type!=='solo' || game || inRoom || saving || !online)return;
   await synchronize();
   if(saveStatus?.kind==='conflict'){$('hint').textContent='Выбери сохранение внизу меню, затем начни волну.';return;}
-  game=arena(true,profile.wave);game.skins=[profile.skin];target=500;
+  game=arena(true,profile.wave,$('difficulty').value);game.skins=[profile.skin];target=500;
   resetInput();resetFeedback();controls(true);
   $('hint').textContent='Защищай оранжевые ворота внизу. Забивай в три бирюзовых.';
   $('mode').textContent='ВОЛНА '+game.wave+' · '+game.rules.name;$('solo').blur();

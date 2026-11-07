@@ -30,10 +30,19 @@ function serve(speed=360) {
   const angle = (Math.floor(Math.random()*4)+0.2+Math.random()*0.6)*Math.PI/2;
   return {x:500,y:500,vx:speed*Math.cos(angle),vy:speed*Math.sin(angle)};
 }
-export function arena(solo, wave=1) {
+export function arena(solo, wave=1, difficulty='normal') {
   const rules = solo ? waveRules(wave) : null;
-  return {solo,wave,rules,t:0,paused:false,goalCount:0,lastGoal:null,balls:[serve(rules?.speed)],hp:[8,8,8,8],score:[0,0],winner:null,
+  difficulty=['easy','normal','hard'].includes(difficulty)?difficulty:'normal';
+  if(rules){
+    const factor=difficulty==='easy'?.75:difficulty==='hard'?1.2:1;
+    rules.botSpeed*=factor;rules.botError/=factor;rules.botReaction/=factor;
+  }
+  return {solo,wave,rules,difficulty,t:0,paused:false,energy:50,magnetUntil:0,playerGoals:0,goalCount:0,lastGoal:null,balls:[serve(rules?.speed)],hp:[8,8,8,8],score:[0,0],winner:null,
     pads:Array.from({length:solo?4:2},()=>({x:500,target:500,hit:-10,perfect:0,nextThink:0}))};
+}
+export function activateMagnet(g){
+  if(!g.solo || g.paused || g.winner!==null || g.energy<100 || g.magnetUntil>g.t || g.balls.some(b=>b.heldUntil>g.t))return false;
+  g.energy-=100;g.magnetUntil=g.t+4;return true;
 }
 export function input(g,i,x,hit) {
   if(g.paused || g.winner!==null) return;
@@ -49,18 +58,23 @@ function wall(g,b,i) {
   const depth=low?b[axis]:1000-b[axis], p=g.pads[i];
   const active=p && (!g.solo || g.hp[i]>0);
   if(active && depth<=48 && depth>=30 && Math.abs(b[along]-p.x)<=89) {
+    b.lastTouch=i;
+    if(g.solo && i===0 && g.magnetUntil>g.t){
+      g.magnetUntil=0;b.heldUntil=g.t+1;b.vx=0;b.vy=0;b.x=p.x;b.y=934;return;
+    }
     const angle=clamp((b[along]-p.x)/85,-1,1)*1.02;
     const perfect=g.t-p.hit<0.17;
     const speed=Math.min(740,Math.hypot(b.vx,b.vy)+(perfect?160:12));
-    if(perfect) {p.perfect++;b.powerUntil=g.t+0.5;}
+    if(perfect) {p.perfect++;b.powerUntil=g.t+0.5;if(g.solo && i===0)g.energy=Math.min(100,g.energy+25);}
     b[vel]=inward*Math.cos(angle)*speed;
     b[vertical?'vy':'vx']=Math.sin(angle)*speed;
   } else if(depth<=14) {
     if(active && Math.abs(b[along]-500)<190) {
       if(g.solo) g.hp[i]--; else g.score[1-i]++;
+      if(g.solo && i!==0 && b.lastTouch===0)g.playerGoals++;
       g.goalCount=(g.goalCount || 0)+1;
       g.lastGoal={side:i,t:g.t};
-      Object.assign(b,serve(g.rules?.speed),{powerUntil:0});
+      Object.assign(b,serve(g.rules?.speed),{powerUntil:0,lastTouch:null,heldUntil:0});
     } else { b[vel]*=-1; b[axis]=low?14:986; }
   }
 }
@@ -84,6 +98,11 @@ export function step(g,dt) {
     p.x+=clamp(p.target-p.x,-limit,limit);
   });
   for(const b of g.balls) {
+    if(b.heldUntil){
+      b.x=g.pads[0].x;b.y=934;
+      if(g.t<b.heldUntil)continue;
+      b.heldUntil=0;b.vx=0;b.vy=-(rules?.speed || 360);b.lastTouch=0;
+    }
     b.x+=b.vx*dt; b.y+=b.vy*dt;
     for(const [x,y] of rules?.bumpers || bumpers) {
       const dx=b.x-x, dy=b.y-y, d=Math.hypot(dx,dy);
@@ -96,6 +115,7 @@ export function step(g,dt) {
   }
   for(let i=0;i<g.balls.length;i++)for(const other of g.balls.slice(i+1)){
     const b=g.balls[i],dx=other.x-b.x,dy=other.y-b.y,d=Math.hypot(dx,dy);
+    if(b.heldUntil>g.t || other.heldUntil>g.t)continue;
     if(d===0 || d>=28)continue;
     const nx=dx/d,ny=dy/d,overlap=(28-d)/2;
     b.x-=nx*overlap;b.y-=ny*overlap;other.x+=nx*overlap;other.y+=ny*overlap;
