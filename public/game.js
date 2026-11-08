@@ -381,7 +381,7 @@ function render(){
     $('energy').value=game.energy;
     $('magnet').disabled=game.paused || game.energy<100 || armed || held;
     $('magnet').textContent=held?'Шар пойман · запуск через 1 с':armed?'Магнит · '+Math.ceil(game.magnetUntil-game.t)+' с':game.energy>=100?'Магнит готов · включить':'Магнит · '+game.energy+'/100';
-    $('energy-note').textContent=held?'Двигай отражатель — шар следует за ним.':armed?'Лови ближайший шар отражателем.':'Точный удар: +25 энергии';
+    $('energy-note').textContent=held?'Двигай отражатель — шар следует за ним.':armed?'Лови ближайший шар отражателем.':'Отражение +5 · точный удар +25';
     if(armed || held){ctx.strokeStyle='#a5cfff';ctx.lineWidth=6;ctx.beginPath();ctx.arc(pad.x,955,100,Math.PI,2*Math.PI);ctx.stroke();}
   }
   if(pad && pad.perfect>lastPerfect){flashUntil=performance.now()+550;announce('Точный удар!','good');feedback('perfect');}
@@ -415,11 +415,7 @@ function render(){
   $('hud').textContent=!game?'ВОЛНА '+String(profile?.wave||1).padStart(2,'0'):game.solo?'Волна '+game.wave+' · Прочность '+game.hp[0]+' · '+Math.ceil(150-game.t)+' с':game.score[seat]+' : '+game.score[1-seat]+' · '+(game.t<120?Math.ceil(120-game.t)+' с':'Овертайм');
   requestAnimationFrame(render);
 }
-// Explicit local test setting: no advertising in the menu or outside VK.
-const bannerPreview=document.createElement('aside');bannerPreview.id='banner-preview';bannerPreview.hidden=true;
-bannerPreview.innerHTML='<button aria-label="Закрыть макет">×</button><b>МЕСТО ДЛЯ БАННЕРА</b><small>Макет · не реклама · без дохода</small>';document.body.append(bannerPreview);
-let bannerPreviewClosed=null;
-bannerPreview.querySelector('button').onclick=()=>{bannerPreviewClosed=game;bannerPreview.hidden=true;};
+// Automatic VK banner; diagnostic history stays internal, never in player settings.
 const desktopAds=()=>view==='web' && innerWidth>=900;
 function bannerArea(){
   const rect=cabinet.getBoundingClientRect(),viewport=window.visualViewport;
@@ -432,34 +428,13 @@ const bannerHistory=[];
 function bannerStatus(text){
   if(bannerHistory.at(-1)!==text)bannerHistory.push(text);
   if(bannerHistory.length>6)bannerHistory.shift();
-  $('banner-status').textContent=bannerHistory.join('\n');
+
 }
 const bannerController=typeof createBannerController==='function'?createBannerController({sdk:inVK?bridge:null,ready:vkInitReady,measure:bannerArea,getMatch:()=>game?game.solo?game:'peer-match':null,isVisible:bannerVisible,onStatus:bannerStatus}):null;
-$('banner-mode').value=inVK?'vk':'off';
-// Earlier versions persisted OFF on every boot, even without a user choice.
-// v2 stores only an explicit choice, so the automatic default can now work.
-try{const saved=localStorage.getItem('rikoshet-banner-choice-v2');if(['off','preview','vk'].includes(saved))$('banner-mode').value=saved;}catch{}
-function changeBannerMode(){
-  const mode=$('banner-mode').value;
-  bannerPreviewClosed=null;bannerController?.setMode(mode);
-  if(mode!=='vk')bannerStatus(mode==='preview'?'Макет включён: начни матч. Реальная реклама не запрашивается.':'Баннер выключен.');
-}
-$('banner-mode').onchange=()=>{try{localStorage.setItem('rikoshet-banner-choice-v2',$('banner-mode').value);}catch{}changeBannerMode();};
-function updateBanner(){
-  document.body.classList.toggle('desktop-arena',desktopAds());
-  const area=bannerArea(),mode=$('banner-mode').value;
-  const visible=mode==='preview' && bannerVisible() && game!==bannerPreviewClosed && !bannerController?.getState().shown && area.gap>=(area.side?200:180);
-  bannerPreview.hidden=!visible;
-  if(visible){
-    bannerPreview.classList.toggle('side',area.side);
-    bannerPreview.style.width=(area.side?Math.min(240,area.gap-24):Math.min(600,area.width))+'px';
-    bannerPreview.style.height=(area.side?Math.min(400,area.height):100)+'px';
-  }
-  void bannerController?.tick();
-}
-changeBannerMode();setInterval(updateBanner,300);
-addEventListener('resize',()=>{bannerPreview.hidden=true;void bannerController?.tick();});
-addEventListener('pagehide',()=>{bannerPreview.hidden=true;bannerController?.setMode('off');});
-addEventListener('pageshow',changeBannerMode);
+function updateBanner(){document.body.classList.toggle('desktop-arena',desktopAds());void bannerController?.tick();}
+bannerController?.setMode(inVK?'vk':'off');setInterval(updateBanner,300);
+addEventListener('resize',updateBanner);
+addEventListener('pagehide',()=>bannerController?.setMode('off'));
+addEventListener('pageshow',()=>bannerController?.setMode(inVK?'vk':'off'));
 if(typeof peerSession!=='undefined')peerSession.init();
 connect();render();

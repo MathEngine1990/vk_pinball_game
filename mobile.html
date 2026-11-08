@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="ru"><head><meta charset="utf-8"><meta name="rikoshet-release" content="9f2355027330"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Арена: Рикошет</title><style>
+<html lang="ru"><head><meta charset="utf-8"><meta name="rikoshet-release" content="047f96628966"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Арена: Рикошет</title><style>
 :root {
   color-scheme: dark;
   font: 15px Arial, sans-serif;
@@ -140,10 +140,6 @@ footer { flex-wrap: wrap; font-size: 11px; min-height: 24px; }
 #event.visible { opacity: 1; }
 #event[data-tone=bad] { background: #762d21eb; }
 #wave-transition { position:absolute; top:14%; left:10%; right:10%; padding:8px; border:1px solid #9ea981; border-radius:8px; background:#12281fea; color:#ffe0aa; text-align:center; font-size:clamp(10px,2vw,15px); pointer-events:none; }
-#banner-preview { position:fixed; bottom:0; left:50%; transform:translateX(-50%); z-index:3; display:flex; flex-direction:column; justify-content:center; align-items:center; gap:8px; padding:16px; border:2px dashed #a5b890; border-radius:8px; background:#1b3028; color:#ebdfbf; text-align:center; }
-#banner-preview.side { left:0; transform:none; }
-#banner-preview button { position:absolute; top:3px; right:3px; min-height:28px; padding:2px 8px; }
-#banner-status { font-size:12px; overflow-wrap:anywhere; white-space:pre-line; }
 body.match.desktop-arena .stage { justify-items:end; }
 @media (max-width:740px) and (orientation:portrait) {
   header { padding: 0 10px; }
@@ -278,12 +274,11 @@ body.match #energy-note { display:none; }
 <section id="queue-status" hidden role="status"><b>Поиск соперника…</b><p>Чем дольше поиск, тем шире диапазон рейтинга.</p><button id="cancel-search">Отменить поиск</button></section>
 <details id="shop"><summary>Оформление отражателя</summary><p>Только внешний вид. Скорость, размер и сила удара одинаковые.</p><div id="shop-items"></div><p id="purchase-confirm" hidden><span id="purchase-text"></span><button id="purchase-yes">Купить</button><button id="purchase-no">Отмена</button></p></details>
 <div id="playing" hidden><button id="hit"><span id="hit-label">✦ Удар готов</span><span id="hit-meter"></span></button><button id="pause">Пауза</button><button id="leave">Выйти</button></div>
-<div id="ability" hidden><button id="magnet">Магнит</button><progress id="energy" max="100" value="50" aria-label="Энергия магнита"></progress><small id="energy-note"></small></div><details id="help"><summary>Как играть · 3 подсказки</summary><p>1. Защищай красные ворота снизу. Забивай в бирюзовые ворота с надписью «ЗАБИВАЙ».</p><p>2. В режиме «Одним пальцем» веди пальцем по площадке под полем. Край отражателя меняет угол отскока.</p><p>3. Отпусти палец прямо перед касанием шара: окно точного удара — 0,17 секунды, перезарядка — 0,8 секунды.</p><p>В волне у каждого 8 прочности. Продержись 150 секунд с наибольшей прочностью или выбей всех ботов. В дуэли — 7 голов либо преимущество после 120 секунд.</p><p>Магнит — только в волнах: начинаешь с 50 энергии, точный удар даёт 25. При 100 нажми «Магнит»: за 4 секунды поймай шар своим отражателем. Он удержится на 1 секунду и автоматически полетит вверх. Награды на всех сложностях одинаковы.</p><button id="help-done">Понятно</button></details>
+<div id="ability" hidden><button id="magnet">Магнит</button><progress id="energy" max="100" value="50" aria-label="Энергия магнита"></progress><small id="energy-note"></small></div><details id="help"><summary>Как играть · 3 подсказки</summary><p>1. Защищай красные ворота снизу. Забивай в бирюзовые ворота с надписью «ЗАБИВАЙ».</p><p>2. В режиме «Одним пальцем» веди пальцем по площадке под полем. Край отражателя меняет угол отскока.</p><p>3. Отпусти палец прямо перед касанием шара: окно точного удара — 0,17 секунды, перезарядка — 0,8 секунды.</p><p>В волне у каждого 8 прочности. Продержись 150 секунд с наибольшей прочностью или выбей всех ботов. В дуэли — 7 голов либо преимущество после 120 секунд.</p><p>Магнит — только в волнах: начинаешь с 50 энергии, обычное отражение даёт 5, точный удар — 25. При 100 нажми «Магнит»: за 4 секунды поймай шар своим отражателем. Он удержится на 1 секунду и автоматически полетит вверх. Награды на всех сложностях одинаковы.</p><button id="help-done">Понятно</button></details>
 <details id="settings"><summary>Управление, звук и вибрация</summary>
 <label class="scheme">Звук <input id="sound-enabled" type="checkbox"></label>
 <label class="scheme">Вибрация при голе и точном ударе <input id="haptics-enabled" type="checkbox"></label>
 <label class="scheme">Уменьшить эффекты <input id="reduced-effects" type="checkbox"></label>
-<label class="scheme">Проверка баннера <select id="banner-mode"><option value="off">Выключен</option><option value="preview">Макет</option><option value="vk">Реклама VK</option></select></label><p id="banner-status" role="status">Баннер выключен.</p><small>Только во время матча и при свободном месте снизу. «Макет» — демонстрация, без рекламы и дохода.</small>
 <label class="scheme">Управление <select id="scheme"><option value="thumb">Одним пальцем</option><option value="direct">По позиции</option></select></label>
 <label class="scheme" id="sensitivity-row">Чувствительность <input id="sensitivity" type="range" min="0.7" max="2.2" step="0.1" value="1.4"><output id="sensitivity-value">1,4</output></label></details>
 <p id="gesture"></p>
@@ -362,9 +357,9 @@ function waveRules(wave) {
     cycle: tier + 1,
     duration: 150,
     speed: Math.min(480, 360 + tier * 12),
-    botSpeed: Math.min(480, 228 + (number - 1) * 10),
-    botError: Math.max(24, 64 - (number - 1) * 2),
-    botReaction: Math.max(0.1, 0.22 - (number - 1) * 0.006),
+    botSpeed: Math.min(480, 228 + (number - 1) * 6),
+    botError: Math.max(24, 64 - (number - 1) * 1.25),
+    botReaction: Math.max(0.1, 0.22 - (number - 1) * 0.004),
     ballsAt: [...type.ballsAt],
     bumpers: type.layout.map(point => [...point])
   };
@@ -409,7 +404,8 @@ function wall(g,b,i) {
     const angle=clamp((b[along]-p.x)/85,-1,1)*1.02;
     const perfect=g.t-p.hit<0.17;
     const speed=Math.min(740,Math.hypot(b.vx,b.vy)+(perfect?160:12));
-    if(perfect) {p.perfect++;b.powerUntil=g.t+0.5;if(g.solo && i===0)g.energy=Math.min(100,g.energy+25);}
+    if(perfect) {p.perfect++;b.powerUntil=g.t+0.5;}
+    if(g.solo && i===0)g.energy=Math.min(100,g.energy+(perfect?25:5));
     b[vel]=inward*Math.cos(angle)*speed;
     b[vertical?'vy':'vx']=Math.sin(angle)*speed;
   } else if(depth<=14) {
@@ -484,7 +480,7 @@ function rewards(game, seat) {
   const bonus = Math.min(10, game.pads[seat].perfect);
   return {
     xp: Math.floor((35 + (won ? 20 : 0) + bonus) * factor),
-    shards: Math.floor((20 + (won ? 10 : 0) + bonus) * factor),
+    shards: game.solo ? 20+(won?10:0)+Math.min(5,Math.floor(game.pads[seat].perfect/2)) : Math.floor((20 + (won ? 10 : 0) + bonus) * factor),
     wave: Number(game.solo && won),
     mmr: game.solo ? 0 : won ? 16 : -16
   };
@@ -1324,7 +1320,7 @@ function render(){
     $('energy').value=game.energy;
     $('magnet').disabled=game.paused || game.energy<100 || armed || held;
     $('magnet').textContent=held?'Шар пойман · запуск через 1 с':armed?'Магнит · '+Math.ceil(game.magnetUntil-game.t)+' с':game.energy>=100?'Магнит готов · включить':'Магнит · '+game.energy+'/100';
-    $('energy-note').textContent=held?'Двигай отражатель — шар следует за ним.':armed?'Лови ближайший шар отражателем.':'Точный удар: +25 энергии';
+    $('energy-note').textContent=held?'Двигай отражатель — шар следует за ним.':armed?'Лови ближайший шар отражателем.':'Отражение +5 · точный удар +25';
     if(armed || held){ctx.strokeStyle='#a5cfff';ctx.lineWidth=6;ctx.beginPath();ctx.arc(pad.x,955,100,Math.PI,2*Math.PI);ctx.stroke();}
   }
   if(pad && pad.perfect>lastPerfect){flashUntil=performance.now()+550;announce('Точный удар!','good');feedback('perfect');}
@@ -1358,11 +1354,7 @@ function render(){
   $('hud').textContent=!game?'ВОЛНА '+String(profile?.wave||1).padStart(2,'0'):game.solo?'Волна '+game.wave+' · Прочность '+game.hp[0]+' · '+Math.ceil(150-game.t)+' с':game.score[seat]+' : '+game.score[1-seat]+' · '+(game.t<120?Math.ceil(120-game.t)+' с':'Овертайм');
   requestAnimationFrame(render);
 }
-// Explicit local test setting: no advertising in the menu or outside VK.
-const bannerPreview=document.createElement('aside');bannerPreview.id='banner-preview';bannerPreview.hidden=true;
-bannerPreview.innerHTML='<button aria-label="Закрыть макет">×</button><b>МЕСТО ДЛЯ БАННЕРА</b><small>Макет · не реклама · без дохода</small>';document.body.append(bannerPreview);
-let bannerPreviewClosed=null;
-bannerPreview.querySelector('button').onclick=()=>{bannerPreviewClosed=game;bannerPreview.hidden=true;};
+// Automatic VK banner; diagnostic history stays internal, never in player settings.
 const desktopAds=()=>view==='web' && innerWidth>=900;
 function bannerArea(){
   const rect=cabinet.getBoundingClientRect(),viewport=window.visualViewport;
@@ -1375,35 +1367,14 @@ const bannerHistory=[];
 function bannerStatus(text){
   if(bannerHistory.at(-1)!==text)bannerHistory.push(text);
   if(bannerHistory.length>6)bannerHistory.shift();
-  $('banner-status').textContent=bannerHistory.join('\n');
+
 }
 const bannerController=typeof createBannerController==='function'?createBannerController({sdk:inVK?bridge:null,ready:vkInitReady,measure:bannerArea,getMatch:()=>game?game.solo?game:'peer-match':null,isVisible:bannerVisible,onStatus:bannerStatus}):null;
-$('banner-mode').value=inVK?'vk':'off';
-// Earlier versions persisted OFF on every boot, even without a user choice.
-// v2 stores only an explicit choice, so the automatic default can now work.
-try{const saved=localStorage.getItem('rikoshet-banner-choice-v2');if(['off','preview','vk'].includes(saved))$('banner-mode').value=saved;}catch{}
-function changeBannerMode(){
-  const mode=$('banner-mode').value;
-  bannerPreviewClosed=null;bannerController?.setMode(mode);
-  if(mode!=='vk')bannerStatus(mode==='preview'?'Макет включён: начни матч. Реальная реклама не запрашивается.':'Баннер выключен.');
-}
-$('banner-mode').onchange=()=>{try{localStorage.setItem('rikoshet-banner-choice-v2',$('banner-mode').value);}catch{}changeBannerMode();};
-function updateBanner(){
-  document.body.classList.toggle('desktop-arena',desktopAds());
-  const area=bannerArea(),mode=$('banner-mode').value;
-  const visible=mode==='preview' && bannerVisible() && game!==bannerPreviewClosed && !bannerController?.getState().shown && area.gap>=(area.side?200:180);
-  bannerPreview.hidden=!visible;
-  if(visible){
-    bannerPreview.classList.toggle('side',area.side);
-    bannerPreview.style.width=(area.side?Math.min(240,area.gap-24):Math.min(600,area.width))+'px';
-    bannerPreview.style.height=(area.side?Math.min(400,area.height):100)+'px';
-  }
-  void bannerController?.tick();
-}
-changeBannerMode();setInterval(updateBanner,300);
-addEventListener('resize',()=>{bannerPreview.hidden=true;void bannerController?.tick();});
-addEventListener('pagehide',()=>{bannerPreview.hidden=true;bannerController?.setMode('off');});
-addEventListener('pageshow',changeBannerMode);
+function updateBanner(){document.body.classList.toggle('desktop-arena',desktopAds());void bannerController?.tick();}
+bannerController?.setMode(inVK?'vk':'off');setInterval(updateBanner,300);
+addEventListener('resize',updateBanner);
+addEventListener('pagehide',()=>bannerController?.setMode('off'));
+addEventListener('pageshow',()=>bannerController?.setMode(inVK?'vk':'off'));
 if(typeof peerSession!=='undefined')peerSession.init();
 connect();render();
 

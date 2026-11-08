@@ -55,6 +55,24 @@ test('wave variants have matching geometry, schedules and bounded difficulty',()
   step(g,1/60);assert.ok(g.balls[0].vy>0,'Diamond bumper reflects the ball at its visible position');
   assert.equal(arena(false,1000000).rules,null,'Progression never changes PvP rules');
 });
+test('ordinary solo reflection charges magnet without rewarding idle time or changing duel',()=>{
+  const g=arena(true);g.balls=[{x:500,y:948,vx:0,vy:360}];step(g,1/60);assert.equal(g.energy,55);
+  g.energy=98;g.balls=[{x:500,y:948,vx:0,vy:360}];step(g,1/60);assert.equal(g.energy,100);
+  g.energy=0;g.paused=true;step(g,100);assert.equal(g.energy,0);
+  const duel=arena(false);duel.balls=[{x:500,y:948,vx:0,vy:360}];step(duel,1/60);assert.equal(duel.energy,50);
+});
+test('solo shard rewards are bounded for wins and losses, PvP rewards stay unchanged',()=>{
+  const g=arena(true);g.winner=1;assert.equal(rewards(g,0).shards,20);
+  g.winner=0;assert.equal(rewards(g,0).shards,30);
+  g.pads[0].perfect=10000;assert.equal(rewards(g,0).shards,35);
+  g.winner=1;assert.equal(rewards(g,0).shards,25);
+  const duel=arena(false);duel.winner=0;assert.deepEqual(rewards(duel,0),{xp:55,shards:30,wave:0,mmr:16});
+  for(let wave=2;wave<=100;wave++){
+    const a=waveRules(wave-1),b=waveRules(wave);
+    assert.ok(b.botSpeed>=a.botSpeed && b.botSpeed-a.botSpeed<=6);
+    assert.ok(b.botReaction<=a.botReaction && b.botReaction>=.1);
+  }
+});
 
 test('pause freezes physics and rejects controls until resumed',()=>{
   const g=arena(true);
@@ -100,7 +118,7 @@ test('cooldown, goal event and shared solo rewards',()=>{
   g.balls=[{x:330,y:985,vx:0,vy:360}];step(g,1/60);
   assert.equal(g.goalCount,1);assert.equal(g.lastGoal.side,0);
   g.winner=0;g.pads[0].perfect=100;
-  assert.deepEqual(rewards(g,0),{xp:45,shards:28,wave:1,mmr:0});
+  assert.deepEqual(rewards(g,0),{xp:45,shards:35,wave:1,mmr:0});
 });
 
 test('all six wave layouts stay finite, bounded and always resolve',()=>{

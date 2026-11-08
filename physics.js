@@ -18,9 +18,9 @@ export function waveRules(wave) {
     cycle: tier + 1,
     duration: 150,
     speed: Math.min(480, 360 + tier * 12),
-    botSpeed: Math.min(480, 228 + (number - 1) * 10),
-    botError: Math.max(24, 64 - (number - 1) * 2),
-    botReaction: Math.max(0.1, 0.22 - (number - 1) * 0.006),
+    botSpeed: Math.min(480, 228 + (number - 1) * 6),
+    botError: Math.max(24, 64 - (number - 1) * 1.25),
+    botReaction: Math.max(0.1, 0.22 - (number - 1) * 0.004),
     ballsAt: [...type.ballsAt],
     bumpers: type.layout.map(point => [...point])
   };
@@ -65,7 +65,8 @@ function wall(g,b,i) {
     const angle=clamp((b[along]-p.x)/85,-1,1)*1.02;
     const perfect=g.t-p.hit<0.17;
     const speed=Math.min(740,Math.hypot(b.vx,b.vy)+(perfect?160:12));
-    if(perfect) {p.perfect++;b.powerUntil=g.t+0.5;if(g.solo && i===0)g.energy=Math.min(100,g.energy+25);}
+    if(perfect) {p.perfect++;b.powerUntil=g.t+0.5;}
+    if(g.solo && i===0)g.energy=Math.min(100,g.energy+(perfect?25:5));
     b[vel]=inward*Math.cos(angle)*speed;
     b[vertical?'vy':'vx']=Math.sin(angle)*speed;
   } else if(depth<=14) {
@@ -140,7 +141,7 @@ export function rewards(game, seat) {
   const bonus = Math.min(10, game.pads[seat].perfect);
   return {
     xp: Math.floor((35 + (won ? 20 : 0) + bonus) * factor),
-    shards: Math.floor((20 + (won ? 10 : 0) + bonus) * factor),
+    shards: game.solo ? 20+(won?10:0)+Math.min(5,Math.floor(game.pads[seat].perfect/2)) : Math.floor((20 + (won ? 10 : 0) + bonus) * factor),
     wave: Number(game.solo && won),
     mmr: game.solo ? 0 : won ? 16 : -16
   };

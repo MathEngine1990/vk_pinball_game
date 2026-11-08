@@ -112,22 +112,6 @@ try {
     await evaluate('game.hp[1]=0');await delay(400);
     assert.ok(await evaluate('lastHP[1]===0 && Number.isFinite(closedAt[1])'),'Eliminated goal closes visually');
     await screenshot(entry+'-closed-goal');
-    await evaluate("$('banner-mode').value='preview';$('banner-mode').onchange()");
-    await delay(400);
-    assert.ok(await evaluate('!bannerPreview.hidden'),'Preview appears in spare bottom space');
-    assert.ok(await evaluate('bannerPreview.getBoundingClientRect().top>=cabinet.getBoundingClientRect().bottom+24'),'Preview does not overlap controls');
-    await screenshot(entry+'-banner-bottom');
-    if(entry==='web'){
-      await resize(1280,800);await delay(400);
-      assert.ok(await evaluate("!bannerPreview.hidden && bannerPreview.classList.contains('side') && bannerPreview.getBoundingClientRect().right+24<=cabinet.getBoundingClientRect().left"),'Desktop banner is left of the right-aligned arena');
-      await screenshot('web-banner-left');
-    }
-    await resize(568,320);await delay(400);
-    assert.ok(await evaluate('bannerPreview.hidden'),'No preview in cramped landscape');
-    await resize(390,844);await delay(400);
-    await evaluate("bannerPreview.querySelector('button').click()");await delay(400);
-    assert.ok(await evaluate('bannerPreview.hidden'),'Closed preview does not reopen in same match');
-    await evaluate("$('banner-mode').value='off';$('banner-mode').onchange()");
     await evaluate("$('reduced-effects').checked=true;$('reduced-effects').onchange()");await delay(40);
     assert.ok(await evaluate('trails.length===0 && sparks.length===0'),'Reduced mode removes decorative trails and particles');
     await evaluate("$('reduced-effects').checked=false;$('reduced-effects').onchange()");
@@ -238,11 +222,11 @@ try {
   assert.ok(await evaluate("events.some(event=>event?.handler==='VKWebAppInit')"),'VK initialization');
   await call('Page.navigate',{url:'http://127.0.0.1:'+server.address().port+'/cloud.html?vk_app_id=123&vk_user_id=42'});await delay(500);
   assert.ok(await evaluate("online && $('save-note').textContent.includes('сохранён в VK')"),'Cloud status');
-  assert.equal(await evaluate("$('banner-mode').value"),'vk','VK automatically enables ads despite legacy off');
+  assert.ok(await evaluate("!document.getElementById('banner-mode') && !document.getElementById('banner-preview') && !document.getElementById('banner-status')"),'No advertising developer controls in player interface');
   await evaluate("start('solo')");await delay(700);
   assert.equal(await evaluate('window.bannerRequests'),1,'Banner requested automatically during VK match');
   await evaluate('game.hp=[8,0,0,0]');await delay(400);
-  assert.ok(await evaluate("$('banner-status').textContent.includes('test no fill')"),'Error remains visible after returning to menu');
+  assert.ok(await evaluate("bannerHistory.some(text=>text.includes('test no fill'))"),'Error remains visible after returning to menu');
   assert.equal(await evaluate('JSON.parse(localStorage.getItem("mock-vk-cloud")).profile.wave'),2);
   await evaluate("localStorage.removeItem('rikoshet-vk-123-42')");
   await call('Page.reload');await delay(400);
