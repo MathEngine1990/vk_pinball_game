@@ -74,12 +74,12 @@ try{
   for(const [name,client] of [['peer-host',a],['peer-guest',b]]){
     const shot=await client.call('Page.captureScreenshot',{format:'png'});await fs.writeFile('outputs/browser-check/'+name+'.png',Buffer.from(shot.data,'base64'));
   }
-  for(const [time,count] of [[30,2],[60,3]]){
-    await a.evaluate(`game.t=${time}-.01;game.paused=false`);
-    await a.until(`game.balls.length===${count}`);
+  for(const [time,count] of [[30,1],[60,1],[120,1]]){
+    await a.evaluate(`game.t=${time}-.01;game.score=[0,0];game.paused=false`);
+    await a.until(`game.t>=${time} && game.balls.length===${count}`);
     await a.evaluate('game.paused=true');
     await b.until(`game.balls.length===${count} && game.paused`);
-    assert.deepEqual(await b.evaluate('game.balls'),await a.evaluate('game.balls'),'Guest receives every ball from host');
+    assert.deepEqual(await b.evaluate('game.balls'),await a.evaluate('game.balls'),'Duel stays connected with one synchronized ball after former spawn times');
   }
   await b.evaluate("$('resume').click()");await a.until('!game.paused');
   await a.evaluate('game.score=[7,0]');await a.until('!game');await b.until('!game');
