@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="ru"><head><meta charset="utf-8"><meta name="rikoshet-release" content="e2753976663e"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Арена: Рикошет</title><style>
+<html lang="ru"><head><meta charset="utf-8"><meta name="rikoshet-release" content="1a998bbe9abd"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Арена: Рикошет</title><style>
 :root {
   color-scheme: dark;
   font: 15px Arial, sans-serif;
@@ -299,6 +299,26 @@ body.match .audio-caption { font-size:9px; }
 
 body.match .audio-switch span { display:none; }
 body.match .audio-switch { width:40px; flex:0 0 40px; }
+
+#duel-result { width:min(440px,calc(var(--game-width,100vw) - 20px)); max-height:calc(var(--game-height,100dvh) - 20px); box-sizing:border-box; overflow:auto; margin:auto; padding:18px; color:#f6edd9; border:2px solid #cba46e; border-radius:14px; background:radial-gradient(ellipse at top,#3a5140,#10291f 75%); box-shadow:0 0 0 4px #0c1d16,0 20px 70px #000b; text-align:center; }
+#duel-result::backdrop { background:#06120bd9; }
+.duel-result-top { font-size:10px; letter-spacing:.14em; color:#d4bf94; }
+.duel-result-emblem { font-size:42px; color:#ffbf79; line-height:1.2; margin:10px 0 4px; }
+#duel-result h2 { margin:8px 0; font:900 italic clamp(17px,4vw,26px)/1.12 Arial,sans-serif; color:#ffd39b; }
+#duel-result-note { font-size:13px; line-height:1.4; color:#d0d8c8; }
+.duel-scoreboard { display:grid; grid-template-columns:minmax(0,1fr) 16px minmax(0,1fr); align-items:center; gap:6px; margin:18px 0 12px; }
+.duel-scoreboard section { display:flex; flex-direction:column; gap:8px; padding:12px 4px; border-radius:8px; background:#091b16; border:1px solid #627367; }
+.duel-scoreboard .duel-winner { border-color:#cba46e; box-shadow:inset 0 0 22px #ffb45c12; }
+.duel-scoreboard small { font-size:9px; letter-spacing:.04em; }
+.duel-scoreboard b { font-size:12px; }
+.duel-scoreboard strong { float:none; font:700 46px/1 monospace; color:#ffcd87; }
+.duel-scoreboard .duel-loser strong { color:#b1bbb3; }
+.duel-score-separator { font:700 30px monospace; color:#9aa68e; }
+.duel-result-footer { font-size:10px; line-height:1.4; color:#aab9a9; }
+#duel-result-menu { position:sticky; bottom:0; width:100%; margin-top:8px; background:linear-gradient(#ffc180,#e59458); color:#251d13; border-color:#ffd49a; min-height:44px; }
+#duel-result[data-outcome=loss] { border-color:#879c8d; }
+#duel-result[data-outcome=loss] .duel-result-emblem { color:#9ab5aa; }
+@media (max-height:450px) { #duel-result { padding:10px; } .duel-result-emblem { display:none; } .duel-scoreboard { margin:8px 0; } .duel-scoreboard section { gap:4px; padding:7px 4px; } .duel-scoreboard strong { font-size:32px; } }
 
 </style></head>
 <body><header><b><i>◉</i> АРЕНА: РИКОШЕТ</b><span id="account" hidden></span></header>
@@ -906,6 +926,7 @@ return {send,start,connect,pauseSession,endLocal};
 // No signaling server, STUN or TURN: only manually exchanged host candidates.
 const peerSession=(()=>{
 let pc,channel,role='',room='',setupTimer,linkTimer,loop,lastHeard=0,lastStep=0,carry=0,lastSent=0,lastPing=0,started=false;
+let finished=false;
 let hostGame=null,frames=0,windowStart=0,accountLabel='';
 const message=text=>{$('peer-status').textContent=text;};
 const uid=()=>Array.from(crypto.getRandomValues(new Uint8Array(12)),n=>n.toString(16).padStart(2,'0')).join('');
@@ -915,11 +936,11 @@ function reset(){
   clearTimeout(setupTimer);clearTimeout(linkTimer);clearInterval(loop);
   if(channel){channel.onclose=channel.onmessage=channel.onopen=channel.onerror=null;channel.close();}
   if(pc){pc.onconnectionstatechange=pc.ondatachannel=null;pc.close();}
-  pc=channel=null;role='';started=false;hostGame=null;carry=0;
+  pc=channel=null;role='';started=false;finished=false;hostGame=null;carry=0;
 }
 function stop(text){
   if(!active())return;
-  reset();game=null;seat=0;networkWaiting=false;confirmExit=false;resetInput();controls(false);
+  hideDuelResult();reset();game=null;seat=0;networkWaiting=false;confirmExit=false;resetInput();controls(false);
   if(accountLabel)$('account').textContent=accountLabel;
   $('peer-panel').hidden=false;$('peer-actions').hidden=false;$('peer-output-box').hidden=true;
   $('peer-apply').hidden=true;$('peer-start').hidden=true;
@@ -927,12 +948,14 @@ function stop(text){
   $('peer-input').value='';$('peer-output').value='';message(text);
   $('mode').textContent='ДУЭЛЬ С ДРУГОМ';$('hint').textContent=text;
 }
-function end(winner){
-  transmit({type:'end',winner});
+function end(winner,finalScore){
+  if(finished || !game)return;
+  if(finalScore)game.score=[...finalScore];
+  if(role==='host')transmit({type:'end',winner,score:[...game.score]});
+  finished=true;clearInterval(loop);clearTimeout(setupTimer);clearTimeout(linkTimer);
   const won=winner===seat;feedback(won?'goal-win':'goal-lose');
-  stop('Дуэль завершена. Для нового матча обменяйтесь новыми кодами.');
-  $('result').hidden=false;$('result-title').textContent=won?'Победа в дуэли!':'Друг выиграл дуэль';
-  $('result-reward').textContent='Дружеский матч: без изменения опыта, осколков и рейтинга.';
+  game.winner=winner;game.paused=true;networkWaiting=false;resetInput();updatePause();
+  showDuelResult({winner,score:[...game.score],seat});
 }
 function snapshot(){transmit({type:'state',game:hostGame});}
 function begin(){
@@ -959,8 +982,12 @@ function receive(event){
   if(!m || typeof m!=='object')return;
   lastHeard=performance.now();
   if(m.type==='ping'){transmit({type:'pong'});return;}
+  if(finished)return;
   if(m.type==='leave')return stop('Друг вышел из дуэли.');
-  if(m.type==='end' && role==='guest' && started && [0,1].includes(m.winner))return end(m.winner);
+  if(m.type==='end' && role==='guest' && started && [0,1].includes(m.winner)){
+    if(m.score!==undefined && (!Array.isArray(m.score)||m.score.length!==2||!m.score.every(n=>Number.isInteger(n)&&n>=0&&n<=100)))return stop('Некорректный итог дуэли.');
+    return end(m.winner,m.score);
+  }
   if(m.type==='pause' && role==='host' && hostGame){hostGame.paused=true;resetInput();snapshot();updatePause();}
   if(m.type==='resume' && role==='host' && hostGame && !document.hidden){hostGame.paused=false;snapshot();updatePause();}
   if(m.type==='input' && role==='host' && hostGame){if(Number.isFinite(m.x))input(hostGame,1,m.x,m.hit===true);}
@@ -976,8 +1003,8 @@ function receive(event){
 function attach(dc){
   if(channel){dc.close();return;}
   channel=dc;
-  dc.onmessage=receive;dc.onerror=()=>stop('Ошибка прямого соединения. Попробуй создать новую дуэль.');
-  dc.onclose=()=>stop('Связь с другом закрыта. Создайте новую дуэль.');
+  dc.onmessage=receive;dc.onerror=()=>!finished && stop('Ошибка прямого соединения. Попробуй создать новую дуэль.');
+  dc.onclose=()=>!finished && stop('Связь с другом закрыта. Создайте новую дуэль.');
   dc.onopen=()=>{
     clearTimeout(setupTimer);lastHeard=lastStep=lastSent=lastPing=performance.now();frames=0;windowStart=lastHeard;
     $('peer-output-box').hidden=true;$('peer-apply').hidden=true;$('peer-start').hidden=role!=='host';
@@ -1001,7 +1028,7 @@ function create(roleName){
   pc=new RTCPeerConnection({iceServers:[]});
   const current=pc;
   pc.onconnectionstatechange=()=>{
-    if(pc!==current)return;
+    if(pc!==current || finished)return;
     if(pc.connectionState==='failed')stop('Сеть не позволяет прямое соединение. Попробуйте один Wi-Fi. Сервер-посредник не используется.');
     if(pc.connectionState==='disconnected'){
       if(game){game.paused=true;updatePause();}
@@ -1041,7 +1068,7 @@ async function host(){
   try{
     current=create('host');room=uid();attach(current.createDataChannel('rikoshet',{ordered:true}));
     message('Подготавливаем приглашение…');await current.setLocalDescription(await current.createOffer());await gather(current);
-    if(pc!==current)return;
+    if(pc!==current || finished)return;
     $('peer-apply').hidden=false;
     output(current,'Шаг 1. Скопируй код и отправь другу. Шаг 2. Вставь ответ друга ниже и нажми «Принять ответ».');
   }catch(e){if(!current || pc===current){if(active())stop(e.message);else message('Этот браузер не поддерживает прямую дуэль.');}}
@@ -1062,17 +1089,17 @@ async function accept(){
   try{
     const data=decode($('peer-input').value,'answer');if(data.room!==room)throw Error('Это ответ на другое приглашение.');
     await current.setRemoteDescription({type:data.type,sdp:data.sdp});
-    if(pc!==current)return;
+    if(pc!==current || finished)return;
     $('peer-apply').hidden=true;message(channel?.readyState==='open'?'Друг подключился. Нажми «Начать матч».':'Пробуем соединиться напрямую…');clearTimeout(setupTimer);
     if(channel?.readyState!=='open')setupTimer=setTimeout(()=>stop('Не удалось соединиться напрямую. Попробуйте один Wi-Fi. Посредников нет.'),25000);
   }catch(e){if(pc===current)message(e.message);}
 }
 function send(m){
   if(m.type==='leave'){transmit({type:'leave'});stop('Ты вышел из дуэли.');return;}
-  if(m.type==='input' && started){if(role==='host')input(hostGame,0,m.x,m.hit);else transmit(m);}
+  if(m.type==='input' && started && !finished){if(role==='host')input(hostGame,0,m.x,m.hit);else transmit(m);}
 }
 function pause(paused){
-  if(!started)return;
+  if(!started || finished)return;
   resetInput();
   if(role==='host'){hostGame.paused=paused;updatePause();snapshot();}
   else{if(paused){game.paused=true;updatePause();}transmit({type:paused?'pause':'resume'});}
@@ -1197,6 +1224,25 @@ for(const id of ['music-enabled','sound-enabled']){$(id).closest('label').hidden
 for(const id of ['music-volume','sound-volume'])audioBalance.append($(id).closest('label'));
 audioBalance.append($('music-status'));audioPanel.append(audioToolbar,audioBalance);
 profilePanel.before(audioPanel);
+const duelResultDialog=document.createElement('dialog');duelResultDialog.id='duel-result';
+duelResultDialog.setAttribute('aria-labelledby','duel-result-title');
+duelResultDialog.innerHTML='<div class="duel-result-top">АРЕНА / РИКОШЕТ · ФИНАЛ</div><div class="duel-result-emblem" aria-hidden="true">✦</div><h2 id="duel-result-title"></h2><p id="duel-result-note"></p><div class="duel-scoreboard"><section class="duel-winner"><small>ПОБЕДИТЕЛЬ</small><b id="duel-winner-name"></b><strong id="duel-winner-score"></strong></section><span class="duel-score-separator">:</span><section class="duel-loser"><small>ПРОИГРАВШИЙ</small><b id="duel-loser-name"></b><strong id="duel-loser-score"></strong></section></div><p class="duel-result-footer">Дружеская дуэль · без изменения рейтинга и наград</p><button id="duel-result-menu">Вернуться в меню ↪</button>';
+document.body.append(duelResultDialog);
+function showDuelResult({winner,score,seat:playerSeat}){
+  if(helpDialog.open)closeHelp();
+  const won=winner===playerSeat;duelResultDialog.dataset.outcome=won?'win':'loss';
+  $('duel-result-title').textContent=won?'ТВОЙ ПОБЕДНЫЙ РИКОШЕТ':'АРЕНА ЗА СОПЕРНИКОМ';
+  $('duel-result-note').textContent=won?'Сталь остыла. Победа — твоя.':'Шар остыл. Следующий рикошет может стать твоим.';
+  $('duel-winner-name').textContent=won?'ТЫ':'СОПЕРНИК';$('duel-loser-name').textContent=won?'СОПЕРНИК':'ТЫ';
+  $('duel-winner-score').textContent=score[winner];$('duel-loser-score').textContent=score[1-winner];
+  $('pause-screen').hidden=true;
+  if(!duelResultDialog.open)duelResultDialog.showModal();
+  $('duel-result-menu').focus();
+}
+function hideDuelResult(){if(duelResultDialog.open)duelResultDialog.close();}
+function leaveDuelResult(){peerSession.send({type:'leave'});}
+$('duel-result-menu').onclick=leaveDuelResult;
+duelResultDialog.addEventListener('cancel',event=>{event.preventDefault();leaveDuelResult();});
 // Audio assets load after interaction; synthesized tones remain a loading fallback.
 let audioContext=null,lastTone=0,goalFlashUntil=0,goalFlashOwn=false;
 let previousBalls=[],sparks=[],trails=[],lastTrailTime=-1,lastHP=[],closedAt={};
@@ -1353,7 +1399,7 @@ function suspendGame(){
   if(game?.solo || (typeof peerSession!=='undefined' && peerSession.active()))pauseSession(true);
 }
 function updatePause(){
-  const visible=Boolean(game && (game.paused || networkWaiting));
+  const visible=Boolean(game && game.winner===null && (game.paused || networkWaiting));
   $('pause-screen').hidden=!visible;
   $('pause').textContent=game?.paused?'▶':'Ⅱ';
   $('pause').title=game?.paused?'Продолжить':'Пауза';$('pause').setAttribute('aria-label',$('pause').title);

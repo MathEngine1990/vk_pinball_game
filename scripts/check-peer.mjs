@@ -86,15 +86,40 @@ try{
     assert.deepEqual(await b.evaluate('game.balls'),await a.evaluate('game.balls'),'Duel stays connected with one synchronized ball after former spawn times');
   }
   await b.evaluate("$('resume').click()");await a.until('!game.paused');
-  await a.evaluate('game.score=[7,0]');await a.until('!game');await b.until('!game');
-  assert.equal(await a.evaluate("$('result-title').textContent"),'Победа в дуэли!');
-  assert.equal(await b.evaluate("$('result-title').textContent"),'Друг выиграл дуэль');
+  await a.evaluate('game.score=[7,2]');await a.until('duelResultDialog.open');await b.until('duelResultDialog.open');
+  assert.equal(await a.evaluate("$('duel-winner-name').textContent"),'ТЫ');
+  assert.equal(await b.evaluate("$('duel-loser-name').textContent"),'ТЫ');
+  for(const client of [a,b]){
+    assert.deepEqual(await client.evaluate("[$('duel-winner-score').textContent,$('duel-loser-score').textContent]"),['7','2'],'Final score delivered with result');
+    assert.ok(await client.evaluate('game && game.paused && game.winner===0 && inRoom'),'Arena retained behind result');
+    for(const [width,height] of [[320,568],[568,320],[390,660]]){
+      await client.call('Emulation.setDeviceMetricsOverride',{width,height,deviceScaleFactor:1,mobile:true});await delay(200);
+      assert.ok(await client.evaluate("(()=>{const r=duelResultDialog.getBoundingClientRect();return r.left>=0&&r.top>=0&&r.right<=innerWidth+1&&r.bottom<=innerHeight+1;})()"),'Result fits mobile viewport');
+    }
+  }
+  const finalTime=await b.evaluate('game.t');await delay(700);assert.equal(await b.evaluate('game.t'),finalTime,'Final arena is frozen');
+  for(const [name,client] of [['duel-victory',a],['duel-defeat',b]]){
+    const shot=await client.call('Page.captureScreenshot',{format:'png'});await fs.writeFile('outputs/browser-check/'+name+'.png',Buffer.from(shot.data,'base64'));
+  }
+  await a.evaluate("$('duel-result-menu').click()");await a.until('!game');await delay(300);
+  assert.ok(await b.evaluate('duelResultDialog.open && game'),'Opponent leaving cannot dismiss your result');
+  await b.evaluate("$('duel-result-menu').click()");await b.until('!game');
   assert.equal(await a.evaluate('JSON.stringify(profile)'),profiles[0]);assert.equal(await b.evaluate('JSON.stringify(profile)'),profiles[1]);
   await a.evaluate("$('peer-host').click()");await a.until("$('peer-output').value.startsWith('RK1.')");
   const nextOffer=await a.evaluate("$('peer-output').value");
   await b.evaluate("$('peer-input').value="+JSON.stringify(nextOffer)+";$('peer-join').click()");await b.until("$('peer-output').value.startsWith('RK1.')");
   const nextAnswer=await b.evaluate("$('peer-output').value");
   await a.evaluate("$('peer-input').value="+JSON.stringify(nextAnswer)+";$('peer-apply').click()");await a.until("!$('peer-start').hidden");
+  await a.evaluate("$('peer-start').click()");await b.until('game && !game.solo');
+  await a.evaluate('game.score=[1,7]');await a.until('duelResultDialog.open');await b.until('duelResultDialog.open');
+  assert.equal(await a.evaluate("$('duel-loser-name').textContent"),'ТЫ');
+  assert.equal(await b.evaluate("$('duel-winner-name').textContent"),'ТЫ');
+  for(const client of [a,b])await client.evaluate("$('duel-result-menu').click()");
+  await a.evaluate("$('peer-host').click()");await a.until("$('peer-output').value.startsWith('RK1.')");
+  const thirdOffer=await a.evaluate("$('peer-output').value");
+  await b.evaluate("$('peer-input').value="+JSON.stringify(thirdOffer)+";$('peer-join').click()");await b.until("$('peer-output').value.startsWith('RK1.')");
+  const thirdAnswer=await b.evaluate("$('peer-output').value");
+  await a.evaluate("$('peer-input').value="+JSON.stringify(thirdAnswer)+";$('peer-apply').click()");await a.until("!$('peer-start').hidden");
   await a.evaluate("$('peer-start').click()");await b.until('game && !game.solo');
   await b.evaluate('testPeers.at(-1).close()');await a.until('!peerSession.active()');
   const closure=await a.evaluate("$('peer-status').textContent");

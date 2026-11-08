@@ -35,6 +35,25 @@ for(const id of ['music-enabled','sound-enabled']){$(id).closest('label').hidden
 for(const id of ['music-volume','sound-volume'])audioBalance.append($(id).closest('label'));
 audioBalance.append($('music-status'));audioPanel.append(audioToolbar,audioBalance);
 profilePanel.before(audioPanel);
+const duelResultDialog=document.createElement('dialog');duelResultDialog.id='duel-result';
+duelResultDialog.setAttribute('aria-labelledby','duel-result-title');
+duelResultDialog.innerHTML='<div class="duel-result-top">АРЕНА / РИКОШЕТ · ФИНАЛ</div><div class="duel-result-emblem" aria-hidden="true">✦</div><h2 id="duel-result-title"></h2><p id="duel-result-note"></p><div class="duel-scoreboard"><section class="duel-winner"><small>ПОБЕДИТЕЛЬ</small><b id="duel-winner-name"></b><strong id="duel-winner-score"></strong></section><span class="duel-score-separator">:</span><section class="duel-loser"><small>ПРОИГРАВШИЙ</small><b id="duel-loser-name"></b><strong id="duel-loser-score"></strong></section></div><p class="duel-result-footer">Дружеская дуэль · без изменения рейтинга и наград</p><button id="duel-result-menu">Вернуться в меню ↪</button>';
+document.body.append(duelResultDialog);
+function showDuelResult({winner,score,seat:playerSeat}){
+  if(helpDialog.open)closeHelp();
+  const won=winner===playerSeat;duelResultDialog.dataset.outcome=won?'win':'loss';
+  $('duel-result-title').textContent=won?'ТВОЙ ПОБЕДНЫЙ РИКОШЕТ':'АРЕНА ЗА СОПЕРНИКОМ';
+  $('duel-result-note').textContent=won?'Сталь остыла. Победа — твоя.':'Шар остыл. Следующий рикошет может стать твоим.';
+  $('duel-winner-name').textContent=won?'ТЫ':'СОПЕРНИК';$('duel-loser-name').textContent=won?'СОПЕРНИК':'ТЫ';
+  $('duel-winner-score').textContent=score[winner];$('duel-loser-score').textContent=score[1-winner];
+  $('pause-screen').hidden=true;
+  if(!duelResultDialog.open)duelResultDialog.showModal();
+  $('duel-result-menu').focus();
+}
+function hideDuelResult(){if(duelResultDialog.open)duelResultDialog.close();}
+function leaveDuelResult(){peerSession.send({type:'leave'});}
+$('duel-result-menu').onclick=leaveDuelResult;
+duelResultDialog.addEventListener('cancel',event=>{event.preventDefault();leaveDuelResult();});
 // Audio assets load after interaction; synthesized tones remain a loading fallback.
 let audioContext=null,lastTone=0,goalFlashUntil=0,goalFlashOwn=false;
 let previousBalls=[],sparks=[],trails=[],lastTrailTime=-1,lastHP=[],closedAt={};
@@ -191,7 +210,7 @@ function suspendGame(){
   if(game?.solo || (typeof peerSession!=='undefined' && peerSession.active()))pauseSession(true);
 }
 function updatePause(){
-  const visible=Boolean(game && (game.paused || networkWaiting));
+  const visible=Boolean(game && game.winner===null && (game.paused || networkWaiting));
   $('pause-screen').hidden=!visible;
   $('pause').textContent=game?.paused?'▶':'Ⅱ';
   $('pause').title=game?.paused?'Продолжить':'Пауза';$('pause').setAttribute('aria-label',$('pause').title);
