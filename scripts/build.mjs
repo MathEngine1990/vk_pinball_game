@@ -18,6 +18,7 @@ const [template, css, physics, sdk, license, platform, session, game] = await Pr
 const scripts = [
   '/* ' + license + ' */\n' + sdk.replace(/^\/\/# sourceMappingURL=.*$/gm, ''),
   platform,
+  (await read('public/music.js')).replace(/^export /gm,''),
   physics.replace(/^export /gm, ''),
   (await read('catalog.js')).replace(/^export /gm,''),
   (await read('public/progress-store.js')).replace(/^export /gm,''),
@@ -56,7 +57,7 @@ for (const name of ['index.html', 'web.html', 'mobile.html']) {
 await fs.writeFile(path.join(output, '.nojekyll'), '');
 // Keep the earlier source handoff usable, while root files remain authoritative.
 const sourceFiles=[
-  'scripts/check-balance.mjs',
+  'scripts/check-balance.mjs','public/music.js','scripts/check-music.mjs','scripts/prepare-audio.py','music.test.js',
   'public/banner-ads.js','banner-ads.test.js',
   'package.json','package-lock.json','README.md','.gitignore','server.js','physics.js','arena.test.js',
   'public/index.html','public/game.js','public/style.css','public/platform.js',
@@ -72,3 +73,6 @@ for (const source of sourceFiles) {
 }
 await fs.writeFile(path.join(root,'Для GitHub','.nojekyll'),'');
 console.log('Релиз ' + version + ' → ' + output);
+
+const audioSource=await fs.stat(path.join(root,'public/audio/runtime')).then(()=>path.join(root,'public/audio/runtime')).catch(()=>path.join(root,'audio/runtime'));
+for(const folder of [root,output,path.join(root,'Для GitHub'),path.join(root,'Готово к загрузке на GitHub')]){await fs.mkdir(path.join(folder,'audio'),{recursive:true});const destination=path.join(folder,'audio/runtime');if(audioSource!==destination)await fs.cp(audioSource,destination,{recursive:true});}

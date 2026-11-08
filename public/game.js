@@ -23,7 +23,7 @@ helpButton.onclick=()=>{if(!game)return;pauseSession(true);$('help-content').app
 function closeHelp(){helpDialog.close();profilePanel.append($('help'),$('settings'),$('gesture'));}
 $('close-help').onclick=closeHelp;
 helpDialog.addEventListener('cancel',e=>{e.preventDefault();closeHelp();});
-// All feedback is local: no audio downloads, analytics or network requests.
+// Short gameplay effects are synthesized locally; music loads separately.
 let audioContext=null,lastTone=0,goalFlashUntil=0,goalFlashOwn=false;
 let previousBalls=[],sparks=[],trails=[],lastTrailTime=-1,lastHP=[],closedAt={};
 const feedbackSettings={sound:false,haptics:false,reduced:matchMedia('(prefers-reduced-motion: reduce)').matches};
@@ -32,10 +32,10 @@ const transition=document.createElement('div');transition.id='wave-transition';t
 let transitionUntil=0;
 function waveTransition(text){transition.textContent=text;transitionUntil=performance.now()+1400;}
 function unlockAudio(){
-  if(!feedbackSettings.sound)return;
+  if(!feedbackSettings.sound && !musicSettings.enabled)return;
   try{const Audio=window.AudioContext||window.webkitAudioContext;if(!Audio)return;audioContext ||= new Audio();if(audioContext.state==='suspended')audioContext.resume().catch(()=>{});}catch{}
 }
-addEventListener('pointerdown',unlockAudio);addEventListener('keydown',unlockAudio);
+addEventListener('pointerdown',()=>{unlockAudio();musicController?.unlock();});addEventListener('keydown',()=>{unlockAudio();musicController?.unlock();});
 function feedback(kind){
   if(document.hidden||game?.paused)return;
   if(feedbackSettings.haptics && kind!=='bounce')try{navigator.vibrate?.(kind==='goal'?45:20);}catch{}
@@ -55,6 +55,21 @@ for(const [id,key] of [['sound-enabled','sound'],['haptics-enabled','haptics'],[
   $(id).checked=feedbackSettings[key];
   $(id).onchange=()=>{feedbackSettings[key]=$(id).checked;try{localStorage.setItem('rikoshet-feedback',JSON.stringify(feedbackSettings));}catch{}if(key==='reduced'){trails=[];sparks=[];return;}unlockAudio();if(feedbackSettings[key])feedback('perfect');};
 }
+let musicViewHidden=false;
+const musicSettings={enabled:true,volume:.65};
+try{Object.assign(musicSettings,JSON.parse(localStorage.getItem('rikoshet-music-v1')||'{}'));}catch{}
+const musicController=typeof createMusicController==='function'?createMusicController({
+  getContext:()=>{unlockAudio();return audioContext;},
+  getState:()=>({game,enabled:musicSettings.enabled,volume:musicSettings.volume,hidden:document.hidden || musicViewHidden}),
+  baseURL:new URL('audio/runtime/',location.href),onStatus:text=>{$('music-status').textContent=text;}
+}):null;
+$('music-enabled').checked=musicSettings.enabled;$('music-volume').value=musicSettings.volume;
+function saveMusic(){try{localStorage.setItem('rikoshet-music-v1',JSON.stringify(musicSettings));}catch{}musicController?.tick();}
+$('music-enabled').onchange=()=>{musicSettings.enabled=$('music-enabled').checked;saveMusic();musicController?.unlock();};
+$('music-volume').oninput=()=>{musicSettings.volume=Number($('music-volume').value);saveMusic();};
+addEventListener('visibilitychange',()=>musicController?.tick());
+addEventListener('pagehide',()=>musicController?.stop());
+bridge?.subscribe(event=>{const type=event.detail?.type;if(type==='VKWebAppViewHide' || type==='VKWebAppViewRestore'){musicViewHidden=type==='VKWebAppViewHide';musicController?.tick();}});
 try{$('help').open=localStorage.getItem('rikoshet-help-seen')!=='1';}catch{$('help').open=true;}
 $('help-done').onclick=()=>{$('help').open=false;if(helpDialog.open)closeHelp();try{localStorage.setItem('rikoshet-help-seen','1');}catch{}};
 function controls(active){

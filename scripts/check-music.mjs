@@ -1,0 +1,67 @@
+import fs from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
+import {spawn} from 'node:child_process';
+import {createServer} from 'node:http';
+import assert from 'node:assert/strict';
+const delay=ms=>new Promise(r=>setTimeout(r,ms));
+const directory=await fs.mkdtemp(path.join(os.tmpdir(),'rikoshet-peer-'));
+const browser=spawn(process.env.BROWSER_PATH||'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe',[
+  '--headless','--disable-gpu','--disable-background-timer-throttling','--disable-renderer-backgrounding','--disable-backgrounding-occluded-windows',
+  '--remote-debugging-port=0','--user-data-dir='+directory,'about:blank'
+],{windowsHide:true,stdio:'ignore'});
+const server=createServer(async(req,res)=>{
+  const name=req.url.split('?')[0];
+  if(/^\/audio\/runtime\/(manifest.json|menu.m4a|track-0[123]\/(drums|bass|other)-\d+\.m4a)$/.test(name)){
+    res.setHeader('Content-Type',name.endsWith('.json')?'application/json':'audio/mp4');
+    try{res.end(await fs.readFile('.'+name));}catch{res.writeHead(404).end();}return;
+  }
+  res.setHeader('Content-Type','text/html; charset=utf-8');res.end(await fs.readFile('Релиз для GitHub Pages/mobile.html'));
+});
+const sessions=[];
+try{
+  await new Promise(r=>server.listen(0,'127.0.0.1',r));
+  let port;for(let i=0;i<100&&!port;i++){await delay(100);try{port=(await fs.readFile(path.join(directory,'DevToolsActivePort'),'utf8')).split('\n')[0];}catch{}}
+  assert.ok(port,'Browser started');
+  async function page(){
+    const target=await (await fetch('http://127.0.0.1:'+port+'/json/new?about:blank',{method:'PUT'})).json();
+    const ws=new WebSocket(target.webSocketDebuggerUrl),pending=new Map(),errors=[];let seq=0;
+    await new Promise(r=>ws.onopen=r);
+    ws.onmessage=e=>{const m=JSON.parse(e.data);if(m.method==='Runtime.exceptionThrown')errors.push(m.params.exceptionDetails);if(pending.has(m.id)){pending.get(m.id)(m);pending.delete(m.id);}};
+    async function call(method,params={}){const id=++seq;const result=await new Promise(resolve=>{pending.set(id,resolve);ws.send(JSON.stringify({id,method,params}));});assert.ok(!result.error,JSON.stringify(result.error));return result.result;}
+    async function evaluate(expression){const r=await call('Runtime.evaluate',{expression,returnByValue:true,awaitPromise:true});assert.ok(!r.exceptionDetails,JSON.stringify(r.exceptionDetails));return r.result.value;}
+    async function until(expression,timeout=10000){const start=Date.now();while(Date.now()-start<timeout){if(await evaluate(expression))return;await delay(100);}throw Error('Timeout: '+expression+' '+await evaluate("$('peer-status').textContent"));}
+    const result={call,evaluate,until,ws,errors};sessions.push(result);
+    await call('Runtime.enable');await call('Page.enable');await call('Emulation.setFocusEmulationEnabled',{enabled:true});
+    await call('Page.addScriptToEvaluateOnNewDocument',{source:'window.testPeers=[];window.RTCPeerConnection=class extends RTCPeerConnection{constructor(config){super(config);window.testPeers.push(this);}};'});
+    await call('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:false});
+    await call('Page.navigate',{url:'http://127.0.0.1:'+server.address().port+'/mobile.html'});await until("typeof online!=='undefined' && online");
+    return result;
+  }
+  const a=await page();
+  await a.call('Runtime.evaluate',{expression:"window.audioStarts=[];const originalStart=AudioBufferSourceNode.prototype.start;AudioBufferSourceNode.prototype.start=function(...args){audioStarts.push({when:args[0],duration:args[2],buffer:this.buffer.duration});return originalStart.apply(this,args);};musicController.unlock()",userGesture:true});
+  await a.until("musicController.inspect().scene==='menu' && musicController.inspect().loaded",20000);
+  for(let n=0;n<3;n++){
+    await a.evaluate('game=arena(false);game.paused=true;controls(true);musicController.tick()');
+    await a.until("musicController.inspect().scene==='match' && musicController.inspect().loaded",20000);
+    assert.equal(await a.evaluate('musicController.inspect().track'),'track-0'+(n+1));
+    await a.evaluate('game.balls[0].minSpeed=1080;musicController.tick()');
+    assert.equal(await a.evaluate('musicController.inspect().level'),1);
+    if(n===0){await delay(14000);assert.ok(await a.evaluate('musicController.inspect().sources<=6 && !musicController.inspect().failed'));}
+    await a.evaluate('game=null;controls(false);musicController.tick()');
+    await a.until("musicController.inspect().scene==='menu' && musicController.inspect().loaded");
+  }
+  await a.evaluate('musicViewHidden=true;musicController.tick()');
+  assert.equal(await a.evaluate('musicController.inspect().scene'),'');
+  await a.evaluate('musicViewHidden=false;musicController.tick()');
+  await a.until("musicController.inspect().scene==='menu' && musicController.inspect().loaded");
+  const starts=await a.evaluate('audioStarts');assert.ok(starts.length>=9);
+  for(let i=0;i<starts.length;i+=3){assert.equal(starts[i].when,starts[i+1].when);assert.equal(starts[i].when,starts[i+2].when);assert.ok(Math.abs(starts[i].buffer-starts[i].duration)<.07);}
+  await a.evaluate("$('music-enabled').checked=false;$('music-enabled').onchange()");
+  assert.equal(await a.evaluate('musicController.inspect().scene'),'');
+  assert.equal(await a.evaluate('musicController.inspect().sources'),0);
+  await a.call('Page.reload');await a.until("typeof online!=='undefined' && online");
+  assert.equal(await a.evaluate('musicSettings.enabled'),false);
+  assert.deepEqual(a.errors,[]);
+  console.log('Music: real AAC decode, menu, three track rotations, synchronized stems, chunk boundary, heat, mute and persistence OK');
+}finally{for(const s of sessions)s.ws.close();server.close();browser.kill();}

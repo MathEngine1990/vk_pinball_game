@@ -1,0 +1,36 @@
+{
+  "chunkSeconds": 12,
+  "tracks": [
+    {
+      "id": "track-01",
+      "duration": 182.549,
+      "roles": [
+        "drums",
+        "bass",
+        "other"
+      ],
+      "chunks": 16
+    },
+    {
+      "id": "track-02",
+      "duration": 122.218,
+      "roles": [
+        "drums",
+        "bass",
+        "other"
+      ],
+      "chunks": 11
+    },
+    {
+      "id": "track-03",
+      "duration": 181.717,
+      "roles": [
+        "drums",
+        "bass",
+        "other"
+      ],
+      "chunks": 16
+    }
+  ],
+  "menu": "menu.m4a"
+}

@@ -26,7 +26,9 @@
 <div id="playing" hidden><button id="hit"><span id="hit-label">✦ Удар готов</span><span id="hit-meter"></span></button><button id="pause">Пауза</button><button id="leave">Выйти</button></div>
 <div id="ability" hidden><button id="magnet">Магнит</button><progress id="energy" max="100" value="50" aria-label="Энергия магнита"></progress><small id="energy-note"></small></div><details id="help"><summary>Как играть · 3 подсказки</summary><p>1. Защищай красные ворота снизу. Забивай в бирюзовые ворота с надписью «ЗАБИВАЙ».</p><p>2. В режиме «Одним пальцем» веди пальцем по площадке под полем. Край отражателя меняет угол отскока.</p><p>3. Отпусти палец прямо перед касанием шара: окно точного удара — 0,17 секунды, перезарядка — 0,8 секунды.</p><p>В волне у каждого 8 прочности. Продержись 150 секунд с наибольшей прочностью или выбей всех ботов. В дуэли — 7 голов либо преимущество после 120 секунд. В дуэли используется один шар.</p><p>Магнит — только в волнах: начинаешь с 50 энергии, обычное отражение даёт 5, точный удар — 25. При 100 нажми «Магнит»: за 4 секунды поймай шар своим отражателем. Он удержится на 1 секунду и автоматически полетит вверх. Награды на всех сложностях одинаковы.</p><button id="help-done">Понятно</button></details>
 <details id="settings"><summary>Управление, звук и вибрация</summary>
-<label class="scheme">Звук <input id="sound-enabled" type="checkbox"></label>
+<label class="scheme">Музыка <input id="music-enabled" type="checkbox" checked></label>
+<label class="scheme">Громкость музыки <input id="music-volume" type="range" min="0" max="1" step="0.05" value="0.65"></label><small id="music-status" role="status"></small>
+<label class="scheme">Звуки игры <input id="sound-enabled" type="checkbox"></label>
 <label class="scheme">Вибрация при голе и точном ударе <input id="haptics-enabled" type="checkbox"></label>
 <label class="scheme">Уменьшить эффекты <input id="reduced-effects" type="checkbox"></label>
 <label class="scheme">Управление <select id="scheme"><option value="thumb">Одним пальцем</option><option value="direct">По позиции</option></select></label>

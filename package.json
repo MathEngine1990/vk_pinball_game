@@ -5,8 +5,9 @@
   "scripts": {
     "start": "node server.js",
     "build": "node scripts/build.mjs",
-    "test": "node --test arena.test.js progress-store.test.js banner-ads.test.js",
+    "test": "node --test arena.test.js progress-store.test.js banner-ads.test.js music.test.js",
     "test:browser": "node scripts/check-browser.mjs",
+    "test:music": "node scripts/check-music.mjs",
     "test:peer": "node scripts/check-peer.mjs"
   },
   "engines":{"node":">=24.0.0"},
