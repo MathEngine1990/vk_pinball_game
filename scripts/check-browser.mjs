@@ -5,7 +5,27 @@ import {pathToFileURL} from 'node:url';
 import {spawn} from 'node:child_process';
 import {createServer} from 'node:http';
 import assert from 'node:assert/strict';
+import vm from 'node:vm';
 
+// Exercise VK gesture lifecycle without depending on a real mobile VK account.
+for(const supported of [true,false]){
+  const calls=[];
+  const context=vm.createContext({URLSearchParams,setTimeout,clearTimeout,console,
+    location:{search:'?vk_app_id=1',pathname:'/mobile.html'},
+    window:{vkBridge:{isEmbedded:()=>true,subscribe:()=>{},supportsAsync:async()=>supported,
+      send:async(method,args)=>{calls.push({method,args});return {};}}}});
+  vm.runInContext(await fs.readFile('public/platform.js','utf8'),context);
+  await vm.runInContext('setGameGestures(true);swipeWork',context);
+  if(supported){
+    assert.ok(calls.some(c=>c.method==='VKWebAppDisableSwipeBack'));
+    assert.ok(calls.some(c=>c.method==='VKWebAppSetSwipeSettings' && c.args.history===false));
+  }else assert.equal(calls.length,1);
+  const count=calls.length;
+  await vm.runInContext('setGameGestures(true);swipeWork',context);
+  assert.equal(calls.length,count,'Repeated state updates do not repeat native requests');
+  await vm.runInContext('setGameGestures(false);swipeWork',context);
+  if(supported)assert.ok(calls.some(c=>c.method==='VKWebAppEnableSwipeBack'));
+}
 const executable=process.env.BROWSER_PATH || 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe';
 const profileDir=await fs.mkdtemp(path.join(os.tmpdir(),'rikoshet-check-'));
 const browser=spawn(executable,[
@@ -81,6 +101,17 @@ try {
     assert.ok(await evaluate("$('wave-title').textContent.includes(waveRules(profile.wave).name)"),'Wave preview matches saved progression');
     await evaluate("$('solo').click()");
     await delay(100);
+    if(entry==='mobile'){
+      await call('Emulation.setTouchEmulationEnabled',{enabled:true});
+      const pad=await evaluate("(()=>{const r=$('touchpad').getBoundingClientRect();return {x:r.left+r.width/2,y:r.top+r.height/2};})()");
+      const before=await evaluate('target');
+      await call('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[pad]});
+      await call('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:pad.x+45,y:pad.y-20}]});
+      await call('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+      assert.ok(await evaluate(`target>${before} && pointer===null && !game.paused && scrollY===0`),'Touch drag controls paddle without scrolling or pausing');
+      assert.ok(await evaluate("getComputedStyle(document.body).position==='fixed'"));
+      await call('Emulation.setTouchEmulationEnabled',{enabled:false});
+    }
     assert.equal(await evaluate('game.wave'),initialWave);
     assert.equal(await evaluate('game.difficulty'),'easy');
     assert.ok(await evaluate("!transition.hidden && transition.textContent.includes('Волна')"),'Wave introduction appears without blocking play');

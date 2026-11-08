@@ -249,3 +249,10 @@ body.match #energy-note { display:none; }
 }
 
 #peer-cancel { position: sticky; top: 0; z-index: 1; }
+
+/* Keep iOS rubber-band scrolling and long-press selection off the arena. */
+html.game-locked, html.game-locked body { overflow: hidden; overscroll-behavior: none; }
+html.game-locked body { position: fixed; inset: 0; width: 100%; }
+body.match main, body.match header { touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+canvas, #touchpad { -webkit-user-select: none; -webkit-touch-callout: none; }
+#help-dialog { touch-action: auto; -webkit-user-select: text; user-select: text; }

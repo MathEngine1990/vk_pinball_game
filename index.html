@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="ru"><head><meta charset="utf-8"><meta name="rikoshet-release" content="fcf09cf31b14"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Арена: Рикошет</title><style>
+<html lang="ru"><head><meta charset="utf-8"><meta name="rikoshet-release" content="f41e5a3f6742"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Арена: Рикошет</title><style>
 :root {
   color-scheme: dark;
   font: 15px Arial, sans-serif;
@@ -252,6 +252,13 @@ body.match #energy-note { display:none; }
 
 #peer-cancel { position: sticky; top: 0; z-index: 1; }
 
+/* Keep iOS rubber-band scrolling and long-press selection off the arena. */
+html.game-locked, html.game-locked body { overflow: hidden; overscroll-behavior: none; }
+html.game-locked body { position: fixed; inset: 0; width: 100%; }
+body.match main, body.match header { touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+canvas, #touchpad { -webkit-user-select: none; -webkit-touch-callout: none; }
+#help-dialog { touch-action: auto; -webkit-user-select: text; user-select: text; }
+
 </style></head>
 <body><header><b><i>◉</i> АРЕНА: РИКОШЕТ</b><span id="account" hidden></span></header>
 <main><section class="panel"><small>ПИНБОЛ • АРКАДА</small><h1>РИКОШЕТ<span>.</span></h1>
@@ -334,6 +341,27 @@ if (bridge && (bridge.isEmbedded() || new URLSearchParams(launch).has('vk_app_id
   bridge.subscribe(event => {
     if (event.detail.type === 'VKWebAppViewHide' && typeof suspendGame === 'function') {
       suspendGame();
+    }
+  });
+}
+
+// Serialize native gesture changes: a late reply must not restore swipes mid-match.
+let swipeLocked=false,swipeWork=Promise.resolve();
+function setGameGestures(locked){
+  if(swipeLocked===locked)return;
+  swipeLocked=locked;
+  swipeWork=swipeWork.catch(()=>{}).then(async()=>{
+    if(!await vkInitReady || !bridge)return;
+    const desired=swipeLocked;
+    const commands=[['VKWebAppSetSwipeSettings',{history:!desired}],
+      [desired?'VKWebAppDisableSwipeBack':'VKWebAppEnableSwipeBack',{}]];
+    for(const [method,args] of commands){
+      let timer;
+      try{
+        await Promise.race([(async()=>{
+          if(await bridge.supportsAsync(method))await bridge.send(method,args);
+        })(),new Promise(resolve=>{timer=setTimeout(resolve,2000);})]);
+      }catch{}finally{clearTimeout(timer);}
     }
   });
 }
@@ -1005,6 +1033,8 @@ function controls(active){
   if(active){gameHeader.prepend($('hud'));profilePanel.open=false;}else originalFooter.prepend($('hud'));
   $('ability').hidden=!game?.solo;
   if(active){$('result-summary').hidden=true;$('result-level').hidden=true;}
+  setGameGestures(active);
+  document.documentElement.classList.toggle('game-locked',active && Boolean(game));
   inRoom=active;$('menu').hidden=active;$('playing').hidden=!active;
   $('online-menu').hidden=active || !networkMode;$('shop').hidden=active;
   $('find').disabled=!online;
@@ -1168,6 +1198,17 @@ function pointerUp(e){
 for(const surface of [table,$('touchpad')]){
   surface.onpointerdown=pointerDown;surface.onpointermove=pointerMove;surface.onpointerup=pointerUp;
   surface.onlostpointercapture=surface.onpointercancel=()=>{pointer=null;pointerSurface=null;};
+}
+// Non-passive fallback for iOS WebViews: consume drags on the game surface,
+// while dialogs and menu fields keep their normal scrolling and selection.
+document.addEventListener('touchmove',event=>{
+  if(game && !helpDialog.open && !event.target.closest('#help-dialog') && event.cancelable)event.preventDefault();
+},{passive:false});
+for(const surface of [table,$('touchpad')]){
+  surface.addEventListener('touchstart',event=>{
+    if(game && !helpDialog.open && event.cancelable)event.preventDefault();
+  },{passive:false});
+  surface.addEventListener('contextmenu',event=>{if(game)event.preventDefault();});
 }
 const keys=new Set();
 onkeydown=e=>{

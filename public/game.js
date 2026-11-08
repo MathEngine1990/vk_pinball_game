@@ -63,6 +63,8 @@ function controls(active){
   if(active){gameHeader.prepend($('hud'));profilePanel.open=false;}else originalFooter.prepend($('hud'));
   $('ability').hidden=!game?.solo;
   if(active){$('result-summary').hidden=true;$('result-level').hidden=true;}
+  setGameGestures(active);
+  document.documentElement.classList.toggle('game-locked',active && Boolean(game));
   inRoom=active;$('menu').hidden=active;$('playing').hidden=!active;
   $('online-menu').hidden=active || !networkMode;$('shop').hidden=active;
   $('find').disabled=!online;
@@ -226,6 +228,17 @@ function pointerUp(e){
 for(const surface of [table,$('touchpad')]){
   surface.onpointerdown=pointerDown;surface.onpointermove=pointerMove;surface.onpointerup=pointerUp;
   surface.onlostpointercapture=surface.onpointercancel=()=>{pointer=null;pointerSurface=null;};
+}
+// Non-passive fallback for iOS WebViews: consume drags on the game surface,
+// while dialogs and menu fields keep their normal scrolling and selection.
+document.addEventListener('touchmove',event=>{
+  if(game && !helpDialog.open && !event.target.closest('#help-dialog') && event.cancelable)event.preventDefault();
+},{passive:false});
+for(const surface of [table,$('touchpad')]){
+  surface.addEventListener('touchstart',event=>{
+    if(game && !helpDialog.open && event.cancelable)event.preventDefault();
+  },{passive:false});
+  surface.addEventListener('contextmenu',event=>{if(game)event.preventDefault();});
 }
 const keys=new Set();
 onkeydown=e=>{
