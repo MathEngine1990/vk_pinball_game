@@ -64,7 +64,10 @@ function wall(g,b,i) {
     }
     const angle=clamp((b[along]-p.x)/85,-1,1)*1.02;
     const perfect=g.t-p.hit<0.17;
-    const speed=Math.min(740,Math.hypot(b.vx,b.vy)+(perfect?160:12));
+    const speed=g.solo
+      ? Math.min(740,Math.hypot(b.vx,b.vy)+(perfect?160:12))
+      : Math.min(1080,Math.max(360,b.minSpeed||360,Math.hypot(b.vx,b.vy))+(perfect?160:36));
+    if(!g.solo)b.minSpeed=speed;
     if(perfect) {p.perfect++;b.powerUntil=g.t+0.5;}
     if(g.solo && i===0)g.energy=Math.min(100,g.energy+(perfect?25:5));
     b[vel]=inward*Math.cos(angle)*speed;
@@ -75,12 +78,18 @@ function wall(g,b,i) {
       if(g.solo && i!==0 && b.lastTouch===0)g.playerGoals++;
       g.goalCount=(g.goalCount || 0)+1;
       g.lastGoal={side:i,t:g.t};
-      Object.assign(b,serve(g.rules?.speed),{powerUntil:0,lastTouch:null,heldUntil:0});
+      Object.assign(b,serve(g.rules?.speed),{powerUntil:0,lastTouch:null,heldUntil:0},g.solo?{}:{minSpeed:360});
     } else { b[vel]*=-1; b[axis]=low?14:986; }
   }
 }
 export function step(g,dt) {
   if(g.winner!==null || g.paused) return;
+  // Faster duel rallies use smaller steps to retain the paddle collision window.
+  if(!g.solo && dt>1/120){
+    const slices=Math.ceil(dt*120);
+    for(let n=0;n<slices && g.winner===null;n++)step(g,dt/slices);
+    return;
+  }
   g.t+=dt;
   const rules=g.rules;
   const additions=(rules?.ballsAt || [35,70]).filter(time=>g.t>=time).length;
@@ -99,6 +108,12 @@ export function step(g,dt) {
     p.x+=clamp(p.target-p.x,-limit,limit);
   });
   for(const b of g.balls) {
+    if(!g.solo){
+      const speed=Math.hypot(b.vx,b.vy),floor=clamp(b.minSpeed||360,360,1080);
+      const next=clamp(speed,floor,1080);
+      if(speed>0){b.vx*=next/speed;b.vy*=next/speed;}
+      else b.vy=-floor;
+    }
     if(b.heldUntil){
       b.x=g.pads[0].x;b.y=934;
       if(g.t<b.heldUntil)continue;

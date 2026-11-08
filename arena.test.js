@@ -200,3 +200,29 @@ test('duel keeps one ball through former spawn times, goals and overtime',()=>{
   step(g,1/60);assert.equal(g.score[1],1);assert.equal(g.balls.length,1);
   g.winner=0;const time=g.t;step(g,1);assert.equal(g.t,time);
 });
+
+test('duel rally speed rises for either player, stays hot until goal and resets',()=>{
+  const g=arena(false),b=g.balls[0];
+  for(let n=0;n<25;n++){
+    const side=n%2,old=Math.hypot(b.vx,b.vy);
+    Object.assign(b,{x:500,y:side?49:951,vx:0,vy:side?-old:old});
+    step(g,1/120);
+    assert.ok(Math.abs(Math.hypot(b.vx,b.vy)-Math.min(1080,360+(n+1)*36))<1e-7);
+    assert.ok(side?b.vy>0:b.vy<0,'Fast ball still reflects');
+  }
+  Object.assign(b,{x:500,y:500,vx:100,vy:0});step(g,1/120);
+  assert.ok(Math.abs(Math.hypot(b.vx,b.vy)-1080)<1e-7,'Floor survives slowdown');
+  g.paused=true;const frozen=JSON.stringify(g);step(g,.1);assert.equal(JSON.stringify(g),frozen);g.paused=false;
+  Object.assign(b,{x:330,y:985,vx:0,vy:1080});step(g,1/120);
+  assert.equal(g.score[1],1);assert.equal(b.minSpeed,360);assert.ok(Math.abs(Math.hypot(b.vx,b.vy)-360)<1e-7);
+  assert.equal(g.balls.length,1);
+});
+test('solo reflection retains original speed and duel precise hits raise the floor',()=>{
+  for(const solo of [true,false]){
+    const g=arena(solo);g.balls=[{x:500,y:951,vx:0,vy:360}];step(g,1/120);
+    assert.ok(Math.abs(Math.hypot(g.balls[0].vx,g.balls[0].vy)-(solo?372:396))<1e-7);
+    if(solo)assert.equal(g.balls[0].minSpeed,undefined);
+  }
+  const g=arena(false);g.pads[0].hit=0;g.balls=[{x:500,y:951,vx:0,vy:360}];step(g,1/120);
+  assert.equal(g.balls[0].minSpeed,520);
+});

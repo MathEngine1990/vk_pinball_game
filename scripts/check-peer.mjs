@@ -74,6 +74,10 @@ try{
   for(const [name,client] of [['peer-host',a],['peer-guest',b]]){
     const shot=await client.call('Page.captureScreenshot',{format:'png'});await fs.writeFile('outputs/browser-check/'+name+'.png',Buffer.from(shot.data,'base64'));
   }
+  await a.evaluate('game.t=1;game.score=[0,0];game.pads[0].x=game.pads[0].target=500;game.pads[0].hit=-10;Object.assign(game.balls[0],{x:500,y:951,vx:0,vy:360,minSpeed:360});game.paused=false');
+  await a.until('game.balls[0].minSpeed===396');await a.evaluate('game.paused=true');
+  await b.until('game.paused && game.balls[0].minSpeed===396');
+  assert.deepEqual(await b.evaluate('game.balls'),await a.evaluate('game.balls'),'Rally heat and speed are authoritative on host');
   for(const [time,count] of [[30,1],[60,1],[120,1]]){
     await a.evaluate(`game.t=${time}-.01;game.score=[0,0];game.paused=false`);
     await a.until(`game.t>=${time} && game.balls.length===${count}`);

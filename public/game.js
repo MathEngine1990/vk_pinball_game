@@ -390,6 +390,8 @@ function render(){
     if(game && b.powerUntil>game.t){
       ctx.strokeStyle='#ffcf76';ctx.lineWidth=5;ctx.beginPath();ctx.arc(b.x,b.y,23,0,Math.PI*2);ctx.stroke();
     }
+    const heat=game && !game.solo ? Math.min(1,Math.max(0,((b.minSpeed||360)-360)/720)) : 0;
+    if(heat>0){ctx.strokeStyle='rgba(255,100,35,'+(.25+.65*heat)+')';ctx.lineWidth=3+heat*5;ctx.beginPath();ctx.arc(b.x,b.y,18,0,Math.PI*2);ctx.stroke();}
     disc(ctx,b.x+4,b.y+9,16,[[0,'#061c13'],[1,'#18362a55']]);disc(ctx,b.x,b.y,14,[[0,'white'],[.32,'#e5f8f1'],[.52,'#7daba0'],[.72,'#33463f'],[1,'#bdc9b4']]);
   }
   ctx.restore();

@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="ru"><head><meta charset="utf-8"><meta name="rikoshet-release" content="583568f1a4dc"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Арена: Рикошет</title><style>
+<html lang="ru"><head><meta charset="utf-8"><meta name="rikoshet-release" content="32029663a766"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Арена: Рикошет</title><style>
 :root {
   color-scheme: dark;
   font: 15px Arial, sans-serif;
@@ -284,7 +284,7 @@ body.match #playing button { flex: 0 1 42px; min-width: 28px; }
 <button id="peer-entry" hidden>Дуэль с другом · обмен кодами</button>
 <section id="peer-panel" hidden>
 <button id="peer-cancel">Назад / закрыть дуэль</button>
-<b>Прямая дуэль 1 на 1</b><p>В дуэли один шар на протяжении всего матча.</p><p>Хозяин рассчитывает матч. Без рейтинга и наград. Лучше пробовать в одной Wi-Fi-сети: через разные сети подключение может не получиться. Серверов-посредников нет.</p>
+<b>Прямая дуэль 1 на 1</b><p>В дуэли один шар. Каждое отражение разгоняет его до гола. После гола скорость сбрасывается.</p><p>Хозяин рассчитывает матч. Без рейтинга и наград. Лучше пробовать в одной Wi-Fi-сети: через разные сети подключение может не получиться. Серверов-посредников нет.</p>
 <p>1. Хозяин создаёт приглашение и отправляет код другу.<br>2. Друг вставляет его, создаёт ответ и отправляет ответ хозяину.<br>3. Хозяин принимает ответ и начинает матч.</p>
 <small>Коды действуют 30 минут. Передавай их только другу: они содержат данные сетевого соединения. При прямой связи соперник может узнать твой IP.</small>
 <p id="peer-status" role="status">Выбери действие. Оставляй игру открытой во время обмена кодами.</p>
@@ -448,7 +448,10 @@ function wall(g,b,i) {
     }
     const angle=clamp((b[along]-p.x)/85,-1,1)*1.02;
     const perfect=g.t-p.hit<0.17;
-    const speed=Math.min(740,Math.hypot(b.vx,b.vy)+(perfect?160:12));
+    const speed=g.solo
+      ? Math.min(740,Math.hypot(b.vx,b.vy)+(perfect?160:12))
+      : Math.min(1080,Math.max(360,b.minSpeed||360,Math.hypot(b.vx,b.vy))+(perfect?160:36));
+    if(!g.solo)b.minSpeed=speed;
     if(perfect) {p.perfect++;b.powerUntil=g.t+0.5;}
     if(g.solo && i===0)g.energy=Math.min(100,g.energy+(perfect?25:5));
     b[vel]=inward*Math.cos(angle)*speed;
@@ -459,12 +462,18 @@ function wall(g,b,i) {
       if(g.solo && i!==0 && b.lastTouch===0)g.playerGoals++;
       g.goalCount=(g.goalCount || 0)+1;
       g.lastGoal={side:i,t:g.t};
-      Object.assign(b,serve(g.rules?.speed),{powerUntil:0,lastTouch:null,heldUntil:0});
+      Object.assign(b,serve(g.rules?.speed),{powerUntil:0,lastTouch:null,heldUntil:0},g.solo?{}:{minSpeed:360});
     } else { b[vel]*=-1; b[axis]=low?14:986; }
   }
 }
 function step(g,dt) {
   if(g.winner!==null || g.paused) return;
+  // Faster duel rallies use smaller steps to retain the paddle collision window.
+  if(!g.solo && dt>1/120){
+    const slices=Math.ceil(dt*120);
+    for(let n=0;n<slices && g.winner===null;n++)step(g,dt/slices);
+    return;
+  }
   g.t+=dt;
   const rules=g.rules;
   const additions=(rules?.ballsAt || [35,70]).filter(time=>g.t>=time).length;
@@ -483,6 +492,12 @@ function step(g,dt) {
     p.x+=clamp(p.target-p.x,-limit,limit);
   });
   for(const b of g.balls) {
+    if(!g.solo){
+      const speed=Math.hypot(b.vx,b.vy),floor=clamp(b.minSpeed||360,360,1080);
+      const next=clamp(speed,floor,1080);
+      if(speed>0){b.vx*=next/speed;b.vy*=next/speed;}
+      else b.vy=-floor;
+    }
     if(b.heldUntil){
       b.x=g.pads[0].x;b.y=934;
       if(g.t<b.heldUntil)continue;
@@ -1374,6 +1389,8 @@ function render(){
     if(game && b.powerUntil>game.t){
       ctx.strokeStyle='#ffcf76';ctx.lineWidth=5;ctx.beginPath();ctx.arc(b.x,b.y,23,0,Math.PI*2);ctx.stroke();
     }
+    const heat=game && !game.solo ? Math.min(1,Math.max(0,((b.minSpeed||360)-360)/720)) : 0;
+    if(heat>0){ctx.strokeStyle='rgba(255,100,35,'+(.25+.65*heat)+')';ctx.lineWidth=3+heat*5;ctx.beginPath();ctx.arc(b.x,b.y,18,0,Math.PI*2);ctx.stroke();}
     disc(ctx,b.x+4,b.y+9,16,[[0,'#061c13'],[1,'#18362a55']]);disc(ctx,b.x,b.y,14,[[0,'white'],[.32,'#e5f8f1'],[.52,'#7daba0'],[.72,'#33463f'],[1,'#bdc9b4']]);
   }
   ctx.restore();
