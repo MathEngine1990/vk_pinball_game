@@ -100,7 +100,7 @@ try{const saved=JSON.parse(localStorage.getItem('rikoshet-audio-mix-v2')||'{}');
 musicSettings.volume=audioMix.music;
 const musicController=typeof createMusicController==='function'?createMusicController({
   getContext:()=>{unlockAudio();return audioContext;},
-  getState:()=>({game,enabled:musicSettings.enabled,volume:musicSettings.volume,hidden:document.hidden || musicViewHidden || splashShown}),
+  getState:()=>({game,enabled:musicSettings.enabled,volume:musicSettings.volume,hidden:document.hidden || musicViewHidden}),
   baseURL:new URL('audio/runtime/',location.href),onStatus:text=>{$('music-status').textContent=text;}
 }):null;
 $('music-enabled').checked=musicSettings.enabled;$('music-volume').value=musicSettings.volume;
@@ -544,4 +544,4 @@ $('splash-enter').onclick=()=>{
   unlockAudio();musicController?.unlock();if(feedbackSettings.sound)void soundController?.preload();
   syncGameViewport();$('solo').focus();
 };
-connect();render();
+connect();render();musicController?.unlock();

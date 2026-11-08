@@ -11,10 +11,10 @@ export function stemLevels(roles,intensity){
 export function createMusicController({getContext,getState,baseURL,onStatus=()=>{},fetcher=fetch}){
   let unlocked=false,manifest,manifestWork,scene='',epoch=0,aborter,master,ctx,menu,menuNode;
   let trackIndex=-1,track,chunk=0,nextTime=0,busy=false,layers=[],nodes=new Set(),pending=null,lastMatch=null;
-  let volume=-1,level=-1,sceneLoaded=false,failedScene='';
+  let volume=-1,level=-1,sceneLoaded=false,failedScene='',autoplayBlocked=false;
   const url=p=>new URL(p,baseURL).href;
   function stop(){
-    epoch++;aborter?.abort();aborter=new AbortController();busy=false;pending=null;sceneLoaded=false;
+    epoch++;aborter?.abort();aborter=new AbortController();busy=false;pending=null;sceneLoaded=false;autoplayBlocked=false;
     for(const source of nodes){try{source.stop();}catch{}source.disconnect();}nodes.clear();
     for(const gain of layers)gain.disconnect();layers=[];
     menu?.pause();if(menu){menu.removeAttribute('src');menu.load();}menuNode?.disconnect();menu=menuNode=null;
@@ -71,7 +71,7 @@ export function createMusicController({getContext,getState,baseURL,onStatus=()=>
         layers=track.roles.map(()=>{const g=ctx.createGain();g.gain.value=0;g.connect(master);return g;});
         chunk=0;nextTime=0;await schedule();
       }
-    }catch(e){if(token===epoch && e.name!=='AbortError'){failedScene=next;onStatus('Музыка недоступна. Выключи и включи её для повтора.');}}
+    }catch(e){if(token===epoch && e.name==='NotAllowedError'){autoplayBlocked=true;return;}if(token===epoch && e.name!=='AbortError'){failedScene=next;onStatus('Музыка недоступна. Выключи и включи её для повтора.');}}
   }
   function tick(){
     if(!unlocked||!ctx)return;
@@ -93,7 +93,12 @@ export function createMusicController({getContext,getState,baseURL,onStatus=()=>
     const s=getState();if(!s.enabled)return;
     ctx=getContext();if(!ctx)return;
     if(!master){master=ctx.createGain();master.gain.value=0;master.connect(ctx.destination);}
-    unlocked=true;if(ctx.state!=='running')void ctx.resume().catch(()=>{});tick();
+    unlocked=true;if(ctx.state!=='running')void ctx.resume().catch(()=>{});
+    if(autoplayBlocked && menu && scene==='menu'){
+      const token=epoch;autoplayBlocked=false;
+      void menu.play().then(()=>{if(token===epoch){sceneLoaded=true;onStatus('');}}).catch(()=>{if(token===epoch)autoplayBlocked=true;});
+    }
+    tick();
   }
   const timer=setInterval(tick,200);
   return {unlock,tick,stop:()=>{stop();scene='';},dispose:()=>{clearInterval(timer);stop();master?.disconnect();},

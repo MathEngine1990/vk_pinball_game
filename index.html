@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="ru"><head><meta charset="utf-8"><meta name="rikoshet-release" content="df1678950e2e"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Арена: Рикошет</title><style>
+<html lang="ru"><head><meta charset="utf-8"><meta name="rikoshet-release" content="24f743f3a98a"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Арена: Рикошет</title><style>
 :root {
   color-scheme: dark;
   font: 15px Arial, sans-serif;
@@ -353,12 +353,12 @@ body.splash-open > header, body.splash-open > main { visibility:hidden; }
 }
 
 </style></head>
-<body class="splash-open"><section id="splash" aria-labelledby="splash-title"><img id="splash-art" src="images/splash.webp" alt="Раскалённый стальной шар над зелёной ареной с медными бамперами" fetchpriority="high"><div id="splash-content"><div class="splash-heading"><span class="splash-kicker">СТАЛЬ · ИСКРЫ · РИКОШЕТ</span><h1 id="splash-title"><small>АРЕНА</small>РИКОШЕТ<span>.</span></h1><p>Защити ворота.<br>Раскали игру.</p></div><div class="splash-entry"><button id="splash-enter" type="button">Войти на арену <span aria-hidden="true">↗</span></button><small>Волны против ботов · Дуэль с другом</small></div></div></section><header><b><i>◉</i> АРЕНА: РИКОШЕТ</b><span id="account" hidden></span></header>
+<body class="splash-open"><section id="splash" aria-labelledby="splash-title"><img id="splash-art" src="images/splash.webp" alt="Раскалённый стальной шар над зелёной ареной с медными бамперами" fetchpriority="high"><div id="splash-content"><div class="splash-heading"><h1 id="splash-title"><small>АРЕНА</small>РИКОШЕТ<span>.</span></h1></div><div class="splash-entry"><button id="splash-enter" type="button">Войти на арену</button></div></div></section><header><b><i>◉</i> АРЕНА: РИКОШЕТ</b><span id="account" hidden></span></header>
 <main><section class="panel"><small>ПИНБОЛ • АРКАДА</small><h1>РИКОШЕТ<span>.</span></h1>
 <p id="hint" role="status">Защищайте свои ворота. Направляйте шар краем отражателя.</p>
 <section id="result" hidden aria-live="polite"><b id="result-title"></b><p id="result-reward"></p><p id="result-summary" hidden></p><p id="result-level" hidden></p></section>
 <section id="progress-overview"><b id="level-title"></b><progress id="xp-progress" max="70" value="0" aria-label="Опыт до следующего уровня"></progress><p id="next-unlock"></p></section>
-<div id="menu"><section id="wave-preview"><b id="wave-title"></b><p id="wave-description"></p><small>Защити свои ворота. Победи всех или сохрани больше прочности за 150 секунд. Ничья — в твою пользу.</small></section><label class="scheme">Сложность ботов <select id="difficulty"><option value="easy">Легко</option><option value="normal" selected>Обычно</option><option value="hard">Сложно</option></select></label><p id="difficulty-note"></p><button id="solo">Продолжить волну <strong>↗</strong></button><button id="create">Создать дуэль <strong>＋</strong></button><form id="join"><input id="code" maxlength="8" placeholder="Код комнаты" aria-label="Код комнаты" required><button>Войти</button></form></div>
+<div id="menu"><section id="wave-preview"><b id="wave-title"></b><p id="wave-description"></p><small>Защити свои ворота. Победи всех или сохрани больше прочности за 150 секунд. Ничья — в твою пользу.</small></section><label class="scheme">Сложность ботов <select id="difficulty"><option value="easy">Легко</option><option value="normal" selected>Обычно</option><option value="hard">Сложно</option></select></label><p id="difficulty-note"></p><button id="solo">Продолжить волну</button><button id="create">Создать дуэль <strong>＋</strong></button><form id="join"><input id="code" maxlength="8" placeholder="Код комнаты" aria-label="Код комнаты" required><button>Войти</button></form></div>
 
 <button id="peer-entry" hidden>Дуэль с другом · обмен кодами</button>
 <section id="peer-panel" hidden>
@@ -477,10 +477,10 @@ function stemLevels(roles,intensity){
 function createMusicController({getContext,getState,baseURL,onStatus=()=>{},fetcher=fetch}){
   let unlocked=false,manifest,manifestWork,scene='',epoch=0,aborter,master,ctx,menu,menuNode;
   let trackIndex=-1,track,chunk=0,nextTime=0,busy=false,layers=[],nodes=new Set(),pending=null,lastMatch=null;
-  let volume=-1,level=-1,sceneLoaded=false,failedScene='';
+  let volume=-1,level=-1,sceneLoaded=false,failedScene='',autoplayBlocked=false;
   const url=p=>new URL(p,baseURL).href;
   function stop(){
-    epoch++;aborter?.abort();aborter=new AbortController();busy=false;pending=null;sceneLoaded=false;
+    epoch++;aborter?.abort();aborter=new AbortController();busy=false;pending=null;sceneLoaded=false;autoplayBlocked=false;
     for(const source of nodes){try{source.stop();}catch{}source.disconnect();}nodes.clear();
     for(const gain of layers)gain.disconnect();layers=[];
     menu?.pause();if(menu){menu.removeAttribute('src');menu.load();}menuNode?.disconnect();menu=menuNode=null;
@@ -537,7 +537,7 @@ function createMusicController({getContext,getState,baseURL,onStatus=()=>{},fetc
         layers=track.roles.map(()=>{const g=ctx.createGain();g.gain.value=0;g.connect(master);return g;});
         chunk=0;nextTime=0;await schedule();
       }
-    }catch(e){if(token===epoch && e.name!=='AbortError'){failedScene=next;onStatus('Музыка недоступна. Выключи и включи её для повтора.');}}
+    }catch(e){if(token===epoch && e.name==='NotAllowedError'){autoplayBlocked=true;return;}if(token===epoch && e.name!=='AbortError'){failedScene=next;onStatus('Музыка недоступна. Выключи и включи её для повтора.');}}
   }
   function tick(){
     if(!unlocked||!ctx)return;
@@ -559,7 +559,12 @@ function createMusicController({getContext,getState,baseURL,onStatus=()=>{},fetc
     const s=getState();if(!s.enabled)return;
     ctx=getContext();if(!ctx)return;
     if(!master){master=ctx.createGain();master.gain.value=0;master.connect(ctx.destination);}
-    unlocked=true;if(ctx.state!=='running')void ctx.resume().catch(()=>{});tick();
+    unlocked=true;if(ctx.state!=='running')void ctx.resume().catch(()=>{});
+    if(autoplayBlocked && menu && scene==='menu'){
+      const token=epoch;autoplayBlocked=false;
+      void menu.play().then(()=>{if(token===epoch){sceneLoaded=true;onStatus('');}}).catch(()=>{if(token===epoch)autoplayBlocked=true;});
+    }
+    tick();
   }
   const timer=setInterval(tick,200);
   return {unlock,tick,stop:()=>{stop();scene='';},dispose:()=>{clearInterval(timer);stop();master?.disconnect();},
@@ -1321,7 +1326,7 @@ try{const saved=JSON.parse(localStorage.getItem('rikoshet-audio-mix-v2')||'{}');
 musicSettings.volume=audioMix.music;
 const musicController=typeof createMusicController==='function'?createMusicController({
   getContext:()=>{unlockAudio();return audioContext;},
-  getState:()=>({game,enabled:musicSettings.enabled,volume:musicSettings.volume,hidden:document.hidden || musicViewHidden || splashShown}),
+  getState:()=>({game,enabled:musicSettings.enabled,volume:musicSettings.volume,hidden:document.hidden || musicViewHidden}),
   baseURL:new URL('audio/runtime/',location.href),onStatus:text=>{$('music-status').textContent=text;}
 }):null;
 $('music-enabled').checked=musicSettings.enabled;$('music-volume').value=musicSettings.volume;
@@ -1765,6 +1770,6 @@ $('splash-enter').onclick=()=>{
   unlockAudio();musicController?.unlock();if(feedbackSettings.sound)void soundController?.preload();
   syncGameViewport();$('solo').focus();
 };
-connect();render();
+connect();render();musicController?.unlock();
 
 </script></body></html>
