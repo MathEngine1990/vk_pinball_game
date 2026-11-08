@@ -16,6 +16,7 @@ const server=createServer(async(req,res)=>{
     res.setHeader('Content-Type',name.endsWith('.json')?'application/json':'audio/mp4');
     try{res.end(await fs.readFile('.'+name));}catch{res.writeHead(404).end();}return;
   }
+  if(/^\/audio\/sfx\/(click|bounce|perfect-hit|goal-win|goal-lose|magnet-catch)\.wav$/.test(name)){res.setHeader('Content-Type','audio/wav');res.end(await fs.readFile('.'+name));return;}
   res.setHeader('Content-Type','text/html; charset=utf-8');res.end(await fs.readFile('Релиз для GitHub Pages/mobile.html'));
 });
 const sessions=[];
@@ -39,7 +40,7 @@ try{
     return result;
   }
   const a=await page();
-  await a.call('Runtime.evaluate',{expression:"window.audioStarts=[];const originalStart=AudioBufferSourceNode.prototype.start;AudioBufferSourceNode.prototype.start=function(...args){audioStarts.push({when:args[0],duration:args[2],buffer:this.buffer.duration});return originalStart.apply(this,args);};musicController.unlock()",userGesture:true});
+  await a.call('Runtime.evaluate',{expression:"window.audioStarts=[];const originalStart=AudioBufferSourceNode.prototype.start;AudioBufferSourceNode.prototype.start=function(...args){audioStarts.push({when:args[0],duration:args[2],buffer:this.buffer.duration,rate:this.playbackRate.value});return originalStart.apply(this,args);};musicController.unlock()",userGesture:true});
   await a.until("musicController.inspect().scene==='menu' && musicController.inspect().loaded",20000);
   for(let n=0;n<3;n++){
     await a.evaluate('game=arena(false);game.paused=true;controls(true);musicController.tick()');
@@ -60,8 +61,19 @@ try{
   await a.evaluate("$('music-enabled').checked=false;$('music-enabled').onchange()");
   assert.equal(await a.evaluate('musicController.inspect().scene'),'');
   assert.equal(await a.evaluate('musicController.inspect().sources'),0);
+  await a.call('Runtime.evaluate',{expression:"feedbackSettings.sound=true;unlockAudio();soundController.preload()",userGesture:true,awaitPromise:true});
+  assert.equal(await a.evaluate('soundController.inspect().loaded.length'),6,'All six WAV effects decode');
+  const effectStart=await a.evaluate('audioStarts.length');
+  for(const kind of ['click','bounce','perfect','goal-win','goal-lose','magnet']){
+    await a.evaluate(`feedback('${kind}')`);await delay(180);
+  }
+  assert.equal(await a.evaluate('audioStarts.length'),effectStart+6,'All gameplay sound mappings play a sample');
+  await a.evaluate("soundController.play('bounce',1)");
+  assert.ok(Math.abs(await a.evaluate('audioStarts.at(-1).rate')-1.45)<1e-6,'Hot duel changes impact pitch');
+  await a.evaluate("$('sound-enabled').checked=false;$('sound-enabled').onchange()");
+  assert.equal(await a.evaluate('soundController.inspect().voices'),0,'Disabling effects stops active voices');
   await a.call('Page.reload');await a.until("typeof online!=='undefined' && online");
   assert.equal(await a.evaluate('musicSettings.enabled'),false);
   assert.deepEqual(a.errors,[]);
-  console.log('Music: real AAC decode, menu, three track rotations, synchronized stems, chunk boundary, heat, mute and persistence OK');
+  console.log('Music: real AAC decode, menu, three track rotations, synchronized stems, chunk boundary, heat, mute, six WAV effects, heat pitch and persistence OK');
 }finally{for(const s of sessions)s.ws.close();server.close();browser.kill();}

@@ -24,7 +24,7 @@ function stop(text){
 }
 function end(winner){
   transmit({type:'end',winner});
-  const won=winner===seat;
+  const won=winner===seat;feedback(won?'goal-win':'goal-lose');
   stop('Дуэль завершена. Для нового матча обменяйтесь новыми кодами.');
   $('result').hidden=false;$('result-title').textContent=won?'Победа в дуэли!':'Друг выиграл дуэль';
   $('result-reward').textContent='Дружеский матч: без изменения опыта, осколков и рейтинга.';

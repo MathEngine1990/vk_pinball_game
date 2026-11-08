@@ -28,6 +28,7 @@ function leaderboard(id){
 }
 const files=new Map(Object.entries({'/':['public/index.html','text/html'],'/game.js':['public/game.js','text/javascript'],'/style.css':['public/style.css','text/css'],'/bridge.js':['node_modules/@vkontakte/vk-bridge/dist/browser.min.js','text/javascript']}));
 for(const entry of ['/web.html','/mobile.html','/index.html'])files.set(entry,files.get('/'));
+files.set('/sound.js',['public/sound.js','text/javascript']);
 files.set('/music.js',['public/music.js','text/javascript']);
 files.set('/platform.js',['public/platform.js','text/javascript']);
 files.set('/session.js',['public/network-session.js','text/javascript']);
@@ -46,14 +47,15 @@ const server=http.createServer((req,res)=>{
   if(/^\/audio\/runtime\/(manifest.json|menu.m4a|track-0[123]\/(drums|bass|other)-\d+\.m4a)$/.test(audioPath)){
     try{const data=readFileSync(new URL('.'+audioPath,import.meta.url));res.setHeader('Content-Type',audioPath.endsWith('.json')?'application/json':'audio/mp4');res.end(data);}catch{res.writeHead(404).end();}return;
   }
+  if(/^\/audio\/sfx\/(click|bounce|perfect-hit|goal-win|goal-lose|magnet-catch)\.wav$/.test(audioPath)){try{res.setHeader('Content-Type','audio/wav');res.end(readFileSync(new URL('.'+audioPath,import.meta.url)));}catch{res.writeHead(404).end();}return;}
   const file=files.get(req.url.split('?')[0]);
   if(!file){res.writeHead(404).end();return;}
   res.setHeader('Content-Type',file[1]+'; charset=utf-8');
   let content=readFileSync(new URL(file[0],import.meta.url),'utf8');
-  if(['physics.js','catalog.js','public/progress-store.js','public/music.js'].includes(file[0]))content=content.replace(/^export /gm,'');
+  if(['physics.js','catalog.js','public/progress-store.js','public/music.js','public/sound.js'].includes(file[0]))content=content.replace(/^export /gm,'');
   if(file[1]==='text/html'){
     content=content.replace('<!-- GAME_SCRIPTS -->',
-      '<script>window.ARENA_SERVER=location.origin;</script><script src="/runtime-config.js"></script><script src="/bridge.js"></script><script src="/platform.js"></script><script src="/music.js"></script><script src="/physics-client.js"></script><script src="/catalog.js"></script><script src="/local-session.js"></script><script src="/session.js"></script><script src="/session-router.js"></script><script src="/game.js"></script>');
+      '<script>window.ARENA_SERVER=location.origin;</script><script src="/runtime-config.js"></script><script src="/bridge.js"></script><script src="/platform.js"></script><script src="/music.js"></script><script src="/sound.js"></script><script src="/physics-client.js"></script><script src="/catalog.js"></script><script src="/local-session.js"></script><script src="/session.js"></script><script src="/session-router.js"></script><script src="/game.js"></script>');
   }
   res.end(content);
 });

@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="ru"><head><meta charset="utf-8"><meta name="rikoshet-release" content="c9ed287c5c34"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Арена: Рикошет</title><style>
+<html lang="ru"><head><meta charset="utf-8"><meta name="rikoshet-release" content="9b8a89a70001"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Арена: Рикошет</title><style>
 :root {
   color-scheme: dark;
   font: 15px Arial, sans-serif;
@@ -488,6 +488,33 @@ function createMusicController({getContext,getState,baseURL,onStatus=()=>{},fetc
 
 </script>
 <script>
+function createSoundController({getContext,baseURL,fetcher=fetch}){
+  const names=['click','bounce','perfect-hit','goal-win','goal-lose','magnet-catch'];
+  const buffers=new Map(),voices=new Set(),last=new Map();let loading=null,ctx;
+  async function preload(){
+    ctx=getContext();if(!ctx||loading)return loading;
+    loading=Promise.all(names.filter(n=>!buffers.has(n)).map(async name=>{
+      try{const r=await fetcher(new URL(name+'.wav',baseURL));if(!r.ok)return;const b=await ctx.decodeAudioData(await r.arrayBuffer());buffers.set(name,b);}catch{}
+    })).finally(()=>{loading=null;});return loading;
+  }
+  function play(kind,heat=0){
+    const name=({perfect:'perfect-hit',magnet:'magnet-catch'})[kind]||kind;
+    const buffer=buffers.get(name);if(!buffer||ctx?.state!=='running')return false;
+    const now=ctx.currentTime,cooldown=name==='bounce'?.055:name==='click'?.06:.15;
+    if(now-(last.get(name)??-10)<cooldown)return true;last.set(name,now);
+    if(voices.size>=10){const oldest=voices.values().next().value;oldest.stop();voices.delete(oldest);}
+    const source=ctx.createBufferSource(),gain=ctx.createGain();source.buffer=buffer;
+    source.playbackRate.value=name==='bounce'?1+.45*Math.max(0,Math.min(1,heat)):1;
+    gain.gain.value=({click:.18,bounce:.24,'perfect-hit':.4,'goal-win':.5,'goal-lose':.5,'magnet-catch':.4})[name]||.3;
+    source.connect(gain);gain.connect(ctx.destination);voices.add(source);
+    source.onended=()=>{voices.delete(source);source.disconnect();gain.disconnect();};source.start();return true;
+  }
+  function stop(){for(const source of voices){try{source.stop();}catch{}}voices.clear();}
+  return {preload,play,stop,inspect:()=>({loaded:[...buffers.keys()],voices:voices.size})};
+}
+
+</script>
+<script>
 const bumpers = [[310,310],[690,310],[310,690],[690,690]];
 const clamp = (n,min,max) => Math.max(min,Math.min(max,n));
 function waveRules(wave) {
@@ -872,7 +899,7 @@ function stop(text){
 }
 function end(winner){
   transmit({type:'end',winner});
-  const won=winner===seat;
+  const won=winner===seat;feedback(won?'goal-win':'goal-lose');
   stop('Дуэль завершена. Для нового матча обменяйтесь новыми кодами.');
   $('result').hidden=false;$('result-title').textContent=won?'Победа в дуэли!':'Друг выиграл дуэль';
   $('result-reward').textContent='Дружеский матч: без изменения опыта, осколков и рейтинга.';
@@ -1128,7 +1155,7 @@ helpButton.onclick=()=>{if(!game)return;pauseSession(true);$('help-content').app
 function closeHelp(){helpDialog.close();profilePanel.append($('help'),$('settings'),$('gesture'));}
 $('close-help').onclick=closeHelp;
 helpDialog.addEventListener('cancel',e=>{e.preventDefault();closeHelp();});
-// Short gameplay effects are synthesized locally; music loads separately.
+// Audio assets load after interaction; synthesized tones remain a loading fallback.
 let audioContext=null,lastTone=0,goalFlashUntil=0,goalFlashOwn=false;
 let previousBalls=[],sparks=[],trails=[],lastTrailTime=-1,lastHP=[],closedAt={};
 const feedbackSettings={sound:false,haptics:false,reduced:matchMedia('(prefers-reduced-motion: reduce)').matches};
@@ -1140,16 +1167,19 @@ function unlockAudio(){
   if(!feedbackSettings.sound && !musicSettings.enabled)return;
   try{const Audio=window.AudioContext||window.webkitAudioContext;if(!Audio)return;audioContext ||= new Audio();if(audioContext.state==='suspended')audioContext.resume().catch(()=>{});}catch{}
 }
-addEventListener('pointerdown',()=>{unlockAudio();musicController?.unlock();});addEventListener('keydown',()=>{unlockAudio();musicController?.unlock();});
+addEventListener('pointerdown',()=>{unlockAudio();musicController?.unlock();if(feedbackSettings.sound)void soundController?.preload();});addEventListener('keydown',()=>{unlockAudio();musicController?.unlock();if(feedbackSettings.sound)void soundController?.preload();});
 function feedback(kind){
-  if(document.hidden||game?.paused)return;
-  if(feedbackSettings.haptics && kind!=='bounce')try{navigator.vibrate?.(kind==='goal'?45:20);}catch{}
+  if(document.hidden||musicViewHidden||(game?.paused && kind!=='click'))return;
+  if(feedbackSettings.haptics && kind!=='bounce')try{navigator.vibrate?.(kind.startsWith('goal')?45:20);}catch{}
   const now=performance.now();
-  if(!feedbackSettings.sound||audioContext?.state!=='running'||now-lastTone<45)return;
+  if(!feedbackSettings.sound||audioContext?.state!=='running')return;
+  const heat=game && !game.solo?((game.balls[0]?.minSpeed||360)-360)/720:0;
+  if(soundController?.play(kind,heat))return;
+  if(now-lastTone<45)return;
   lastTone=now;
   try{
     const osc=audioContext.createOscillator(),gain=audioContext.createGain(),t=audioContext.currentTime;
-    const frequency=kind==='goal'?130:kind==='perfect'?880:kind==='multi'?660:380;
+    const frequency=kind.startsWith('goal')?130:kind==='perfect'?880:kind==='multi'?660:380;
     osc.frequency.setValueAtTime(frequency,t);osc.frequency.exponentialRampToValueAtTime(frequency*.55,t+.12);
     gain.gain.setValueAtTime(.045,t);gain.gain.exponentialRampToValueAtTime(.001,t+.14);
     osc.connect(gain);gain.connect(audioContext.destination);osc.start(t);osc.stop(t+.15);
@@ -1158,8 +1188,10 @@ function feedback(kind){
 }
 for(const [id,key] of [['sound-enabled','sound'],['haptics-enabled','haptics'],['reduced-effects','reduced']]){
   $(id).checked=feedbackSettings[key];
-  $(id).onchange=()=>{feedbackSettings[key]=$(id).checked;try{localStorage.setItem('rikoshet-feedback',JSON.stringify(feedbackSettings));}catch{}if(key==='reduced'){trails=[];sparks=[];return;}unlockAudio();if(feedbackSettings[key])feedback('perfect');};
+  $(id).onchange=()=>{feedbackSettings[key]=$(id).checked;try{localStorage.setItem('rikoshet-feedback',JSON.stringify(feedbackSettings));}catch{}if(key==='reduced'){trails=[];sparks=[];return;}unlockAudio();if(key==='sound'){if(feedbackSettings.sound)void soundController?.preload();else soundController?.stop();}if(feedbackSettings[key])feedback('perfect');};
 }
+const soundController=typeof createSoundController==='function'?createSoundController({getContext:()=>{unlockAudio();return audioContext;},baseURL:new URL('audio/sfx/',location.href)}):null;
+document.addEventListener('click',event=>{if(event.target.closest('button,summary'))feedback('click');});
 let musicViewHidden=false;
 const musicSettings={enabled:true,volume:.65};
 try{Object.assign(musicSettings,JSON.parse(localStorage.getItem('rikoshet-music-v1')||'{}'));}catch{}
@@ -1172,9 +1204,9 @@ $('music-enabled').checked=musicSettings.enabled;$('music-volume').value=musicSe
 function saveMusic(){try{localStorage.setItem('rikoshet-music-v1',JSON.stringify(musicSettings));}catch{}musicController?.tick();}
 $('music-enabled').onchange=()=>{musicSettings.enabled=$('music-enabled').checked;saveMusic();musicController?.unlock();};
 $('music-volume').oninput=()=>{musicSettings.volume=Number($('music-volume').value);saveMusic();};
-addEventListener('visibilitychange',()=>musicController?.tick());
-addEventListener('pagehide',()=>musicController?.stop());
-bridge?.subscribe(event=>{const type=event.detail?.type;if(type==='VKWebAppViewHide' || type==='VKWebAppViewRestore'){musicViewHidden=type==='VKWebAppViewHide';musicController?.tick();}});
+addEventListener('visibilitychange',()=>{musicController?.tick();if(document.hidden)soundController?.stop();});
+addEventListener('pagehide',()=>{musicController?.stop();soundController?.stop();});
+bridge?.subscribe(event=>{const type=event.detail?.type;if(type==='VKWebAppViewHide' || type==='VKWebAppViewRestore'){musicViewHidden=type==='VKWebAppViewHide';musicController?.tick();if(musicViewHidden)soundController?.stop();}});
 try{$('help').open=localStorage.getItem('rikoshet-help-seen')!=='1';}catch{$('help').open=true;}
 $('help-done').onclick=()=>{$('help').open=false;if(helpDialog.open)closeHelp();try{localStorage.setItem('rikoshet-help-seen','1');}catch{}};
 function controls(active){
@@ -1272,6 +1304,7 @@ function updatePause(){
   $('pause-text').textContent=networkWaiting?'Ожидаем соединения с соперником':confirmExit?'Награда за незавершённую волну не начисляется':'Нажми «Продолжить», когда будешь готов';
 }
 function showResult(result){
+  if(result.reward)feedback(result.won?'goal-win':'goal-lose');
   waveTransition(result.reward?(result.won?'Волна пройдена · дальше волна '+profile.wave:'Волна завершена · попробуй снова'):'Возвращение в меню');
   profilePanel.open=false;
   confirmExit=false;updatePause();
@@ -1458,6 +1491,7 @@ function render(){
   if(game && !game.paused){
     game.balls.forEach((b,i)=>{
       const old=previousBalls[i];
+      if(b.heldUntil>game.t && !(old?.heldUntil>game.t))feedback('magnet');
       if(old && Math.hypot(b.x-old.x,b.y-old.y)<100 && b.vx*old.vx+b.vy*old.vy<0){
         if(!feedbackSettings.reduced)sparks.push({x:b.x,y:b.y,until:frameNow+260});feedback('bounce');
       }
@@ -1539,7 +1573,7 @@ function render(){
   if(game && (game.goalCount||0)>lastGoalCount){
     lastGoalCount=game.goalCount;
     const own=game.lastGoal.side===seat;
-    goalFlashUntil=frameNow+650;goalFlashOwn=own;feedback('goal');
+    goalFlashUntil=frameNow+650;goalFlashOwn=own;feedback(own?'goal-lose':'goal-win');
     announce(own?'Твои ворота · −1':'Гол сопернику! ',own?'bad':'good');
   }
   if(game && game.balls.length>lastBallCount){
