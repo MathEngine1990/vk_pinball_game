@@ -48,6 +48,7 @@ const server=http.createServer((req,res)=>{
     try{const data=readFileSync(new URL('.'+audioPath,import.meta.url));res.setHeader('Content-Type',audioPath.endsWith('.json')?'application/json':'audio/mp4');res.end(data);}catch{res.writeHead(404).end();}return;
   }
   if(/^\/audio\/sfx\/(click|bounce|perfect-hit|goal-win|goal-lose|magnet-catch)\.wav$/.test(audioPath)){try{res.setHeader('Content-Type','audio/wav');res.end(readFileSync(new URL('.'+audioPath,import.meta.url)));}catch{res.writeHead(404).end();}return;}
+  if(audioPath==='/images/splash.webp'){res.setHeader('Content-Type','image/webp');res.end(readFileSync(new URL('./images/splash.webp',import.meta.url)));return;}
   const file=files.get(req.url.split('?')[0]);
   if(!file){res.writeHead(404).end();return;}
   res.setHeader('Content-Type',file[1]+'; charset=utf-8');

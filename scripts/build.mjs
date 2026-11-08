@@ -80,3 +80,6 @@ for(const folder of [root,output,path.join(root,'Для GitHub'),path.join(root,
 
 const soundSource=await fs.stat(path.join(root,'public/audio/sfx')).then(()=>path.join(root,'public/audio/sfx')).catch(()=>path.join(root,'audio/sfx'));
 for(const folder of [root,output,path.join(root,'Для GitHub'),path.join(root,'Готово к загрузке на GitHub')]){const destination=path.join(folder,'audio/sfx');if(soundSource!==destination)await fs.cp(soundSource,destination,{recursive:true});}
+
+const imageSource=await fs.stat(path.join(root,'public/images')).then(()=>path.join(root,'public/images')).catch(()=>path.join(root,'images'));
+for(const folder of [root,output,path.join(root,'Для GitHub'),path.join(root,'Готово к загрузке на GitHub')]){const destination=path.join(folder,'images');if(imageSource!==destination)await fs.cp(imageSource,destination,{recursive:true});}

@@ -2,6 +2,7 @@ const $=id=>document.getElementById(id);
 const table=$('table'), ctx=table.getContext('2d');
 let game=null,seat=0,target=500,hit=false,profile,online=false,inRoom=false,adsEnabled=false;
 let networkWaiting=false,confirmExit=false;
+let splashShown=true;
 // Keep the same controls and IDs when changing between menu and arena layouts.
 const profilePanel=document.createElement('details');profilePanel.id='profile-panel';
 const profileSummary=document.createElement('summary');profileSummary.textContent='Настройки и профиль';profilePanel.append(profileSummary);
@@ -99,7 +100,7 @@ try{const saved=JSON.parse(localStorage.getItem('rikoshet-audio-mix-v2')||'{}');
 musicSettings.volume=audioMix.music;
 const musicController=typeof createMusicController==='function'?createMusicController({
   getContext:()=>{unlockAudio();return audioContext;},
-  getState:()=>({game,enabled:musicSettings.enabled,volume:musicSettings.volume,hidden:document.hidden || musicViewHidden}),
+  getState:()=>({game,enabled:musicSettings.enabled,volume:musicSettings.volume,hidden:document.hidden || musicViewHidden || splashShown}),
   baseURL:new URL('audio/runtime/',location.href),onStatus:text=>{$('music-status').textContent=text;}
 }):null;
 $('music-enabled').checked=musicSettings.enabled;$('music-volume').value=musicSettings.volume;
@@ -536,4 +537,11 @@ addEventListener('resize',updateBanner);
 addEventListener('pagehide',()=>bannerController?.setMode('off'));
 addEventListener('pageshow',()=>bannerController?.setMode(inVK?'vk':'off'));
 if(typeof peerSession!=='undefined')peerSession.init();
+document.querySelector('main').inert=true;gameHeader.inert=true;
+$('splash-enter').onclick=()=>{
+  splashShown=false;$('splash').hidden=true;document.body.classList.remove('splash-open');
+  document.querySelector('main').inert=false;gameHeader.inert=false;
+  unlockAudio();musicController?.unlock();if(feedbackSettings.sound)void soundController?.preload();
+  syncGameViewport();$('solo').focus();
+};
 connect();render();

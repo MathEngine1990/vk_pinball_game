@@ -10,7 +10,7 @@ const browser=spawn(process.env.BROWSER_PATH||'C:/Program Files (x86)/Microsoft/
   '--headless','--disable-gpu','--disable-background-timer-throttling','--disable-renderer-backgrounding','--disable-backgrounding-occluded-windows',
   '--remote-debugging-port=0','--user-data-dir='+directory,'about:blank'
 ],{windowsHide:true,stdio:'ignore'});
-const server=createServer(async(req,res)=>{res.setHeader('Content-Type','text/html; charset=utf-8');res.end(await fs.readFile('Релиз для GitHub Pages/mobile.html'));});
+const server=createServer(async(req,res)=>{if(req.url==='/images/splash.webp'){res.setHeader('Content-Type','image/webp');res.end(await fs.readFile('images/splash.webp'));return;}res.setHeader('Content-Type','text/html; charset=utf-8');res.end(await fs.readFile('Релиз для GitHub Pages/mobile.html'));});
 const sessions=[];
 try{
   await new Promise(r=>server.listen(0,'127.0.0.1',r));
@@ -22,7 +22,7 @@ try{
     await new Promise(r=>ws.onopen=r);
     ws.onmessage=e=>{const m=JSON.parse(e.data);if(m.method==='Runtime.exceptionThrown')errors.push(m.params.exceptionDetails);if(pending.has(m.id)){pending.get(m.id)(m);pending.delete(m.id);}};
     async function call(method,params={}){const id=++seq;const result=await new Promise(resolve=>{pending.set(id,resolve);ws.send(JSON.stringify({id,method,params}));});assert.ok(!result.error,JSON.stringify(result.error));return result.result;}
-    async function evaluate(expression){const r=await call('Runtime.evaluate',{expression,returnByValue:true,awaitPromise:true});assert.ok(!r.exceptionDetails,JSON.stringify(r.exceptionDetails));return r.result.value;}
+    async function evaluate(expression){const r=await call('Runtime.evaluate',{expression:"if(typeof splashShown!=='undefined' && splashShown)$('splash-enter').click();\n"+expression,returnByValue:true,awaitPromise:true,userGesture:true});assert.ok(!r.exceptionDetails,JSON.stringify(r.exceptionDetails));return r.result.value;}
     async function until(expression,timeout=10000){const start=Date.now();while(Date.now()-start<timeout){if(await evaluate(expression))return;await delay(100);}throw Error('Timeout: '+expression+' '+await evaluate("$('peer-status').textContent"));}
     const result={call,evaluate,until,ws,errors};sessions.push(result);
     await call('Runtime.enable');await call('Page.enable');await call('Emulation.setFocusEmulationEnabled',{enabled:true});

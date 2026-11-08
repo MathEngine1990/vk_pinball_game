@@ -12,6 +12,7 @@ const browser=spawn(process.env.BROWSER_PATH||'C:/Program Files (x86)/Microsoft/
 ],{windowsHide:true,stdio:'ignore'});
 const server=createServer(async(req,res)=>{
   const name=req.url.split('?')[0];
+  if(name==='/images/splash.webp'){res.setHeader('Content-Type','image/webp');res.end(await fs.readFile('images/splash.webp'));return;}
   if(/^\/audio\/runtime\/(manifest.json|menu.m4a|track-0[123]\/(drums|bass|other)-\d+\.m4a)$/.test(name)){
     res.setHeader('Content-Type',name.endsWith('.json')?'application/json':'audio/mp4');
     try{res.end(await fs.readFile('.'+name));}catch{res.writeHead(404).end();}return;
@@ -30,7 +31,7 @@ try{
     await new Promise(r=>ws.onopen=r);
     ws.onmessage=e=>{const m=JSON.parse(e.data);if(m.method==='Runtime.exceptionThrown')errors.push(m.params.exceptionDetails);if(pending.has(m.id)){pending.get(m.id)(m);pending.delete(m.id);}};
     async function call(method,params={}){const id=++seq;const result=await new Promise(resolve=>{pending.set(id,resolve);ws.send(JSON.stringify({id,method,params}));});assert.ok(!result.error,JSON.stringify(result.error));return result.result;}
-    async function evaluate(expression){const r=await call('Runtime.evaluate',{expression,returnByValue:true,awaitPromise:true});assert.ok(!r.exceptionDetails,JSON.stringify(r.exceptionDetails));return r.result.value;}
+    async function evaluate(expression){const r=await call('Runtime.evaluate',{expression:"if(typeof splashShown!=='undefined' && splashShown)$('splash-enter').click();\n"+expression,returnByValue:true,awaitPromise:true,userGesture:true});assert.ok(!r.exceptionDetails,JSON.stringify(r.exceptionDetails));return r.result.value;}
     async function until(expression,timeout=10000){const start=Date.now();while(Date.now()-start<timeout){if(await evaluate(expression))return;await delay(100);}throw Error('Timeout: '+expression+' '+await evaluate("$('peer-status').textContent"));}
     const result={call,evaluate,until,ws,errors};sessions.push(result);
     await call('Runtime.enable');await call('Page.enable');await call('Emulation.setFocusEmulationEnabled',{enabled:true});

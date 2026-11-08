@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="ru"><head><meta charset="utf-8"><meta name="rikoshet-release" content="1a998bbe9abd"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Арена: Рикошет</title><style>
+<html lang="ru"><head><meta charset="utf-8"><meta name="rikoshet-release" content="df1678950e2e"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Арена: Рикошет</title><style>
 :root {
   color-scheme: dark;
   font: 15px Arial, sans-serif;
@@ -320,8 +320,40 @@ body.match .audio-switch { width:40px; flex:0 0 40px; }
 #duel-result[data-outcome=loss] .duel-result-emblem { color:#9ab5aa; }
 @media (max-height:450px) { #duel-result { padding:10px; } .duel-result-emblem { display:none; } .duel-scoreboard { margin:8px 0; } .duel-scoreboard section { gap:4px; padding:7px 4px; } .duel-scoreboard strong { font-size:32px; } }
 
+/* Full launch artwork, separate from gameplay and its input surfaces. */
+body.splash-open > header, body.splash-open > main { visibility:hidden; }
+#splash { position:fixed; inset:0; z-index:20; width:100%; height:100dvh; overflow:auto; background:#03150d; color:#fff0d4; }
+#splash-art { position:absolute; inset:0; width:100%; height:100%; object-fit:contain; object-position:right center; }
+#splash::after { content:""; position:absolute; inset:0; background:linear-gradient(90deg,#04180fe8,transparent 70%); pointer-events:none; }
+#splash-content { position:relative; z-index:1; display:flex; flex-direction:column; justify-content:space-between; width:min(52%,620px); min-height:100%; padding:clamp(20px,7vh,70px) clamp(20px,5vw,75px); }
+.splash-kicker { font-size:10px; letter-spacing:.2em; font-weight:bold; color:#d3b382; }
+#splash-title { display:block; font:900 italic clamp(34px,6vw,80px)/.95 Arial,sans-serif; letter-spacing:-.055em; margin:22px 0; text-shadow:0 3px 20px #0008; }
+#splash-title small { display:block; font:700 16px/2 Arial,sans-serif; letter-spacing:.4em; color:#d5bd93; }
+#splash-title span { color:#ffad69; }
+.splash-heading p { font-size:clamp(14px,2vw,20px); line-height:1.45; color:#e1d5bf; }
+#splash-enter { width:100%; padding:15px 20px; border:1px solid #ffdb9b; background:linear-gradient(#ffcb8a,#e99455); color:#25190c; font-size:17px; font-weight:800; box-shadow:0 4px #6e4328,0 0 34px #ff9e3820; }
+#splash-enter span { float:right; }
+.splash-entry > small { display:block; margin-top:18px; text-align:center; color:#bbbfad; font-size:11px; line-height:1.5; }
+@media (orientation:portrait) {
+  #splash-art { object-fit:cover; object-position:center; }
+  #splash::after { background:linear-gradient(#02150c45,transparent 40%,transparent 70%,#02150ce8); }
+  #splash-content { width:100%; padding:calc(env(safe-area-inset-top) + 32px) 24px calc(env(safe-area-inset-bottom) + 30px); }
+  #splash-title { font-size:clamp(36px,10vw,64px); margin:12px 0; }
+  .splash-heading { text-align:center; }
+  .splash-heading p { font-size:14px; margin:10px 0; }
+  .splash-entry { width:min(100%,420px); align-self:center; }
+}
+@media (max-height:450px) and (orientation:landscape) {
+  #splash-content { padding:16px 24px; width:53%; }
+  #splash-title { font-size:34px; margin:8px 0; }
+  #splash-title small { font-size:11px; }
+  .splash-heading p { margin:6px 0; font-size:13px; }
+  .splash-entry > small { margin-top:10px; font-size:9px; }
+  #splash-enter { min-height:40px; padding:9px 12px; font-size:14px; }
+}
+
 </style></head>
-<body><header><b><i>◉</i> АРЕНА: РИКОШЕТ</b><span id="account" hidden></span></header>
+<body class="splash-open"><section id="splash" aria-labelledby="splash-title"><img id="splash-art" src="images/splash.webp" alt="Раскалённый стальной шар над зелёной ареной с медными бамперами" fetchpriority="high"><div id="splash-content"><div class="splash-heading"><span class="splash-kicker">СТАЛЬ · ИСКРЫ · РИКОШЕТ</span><h1 id="splash-title"><small>АРЕНА</small>РИКОШЕТ<span>.</span></h1><p>Защити ворота.<br>Раскали игру.</p></div><div class="splash-entry"><button id="splash-enter" type="button">Войти на арену <span aria-hidden="true">↗</span></button><small>Волны против ботов · Дуэль с другом</small></div></div></section><header><b><i>◉</i> АРЕНА: РИКОШЕТ</b><span id="account" hidden></span></header>
 <main><section class="panel"><small>ПИНБОЛ • АРКАДА</small><h1>РИКОШЕТ<span>.</span></h1>
 <p id="hint" role="status">Защищайте свои ворота. Направляйте шар краем отражателя.</p>
 <section id="result" hidden aria-live="polite"><b id="result-title"></b><p id="result-reward"></p><p id="result-summary" hidden></p><p id="result-level" hidden></p></section>
@@ -1191,6 +1223,7 @@ const $=id=>document.getElementById(id);
 const table=$('table'), ctx=table.getContext('2d');
 let game=null,seat=0,target=500,hit=false,profile,online=false,inRoom=false,adsEnabled=false;
 let networkWaiting=false,confirmExit=false;
+let splashShown=true;
 // Keep the same controls and IDs when changing between menu and arena layouts.
 const profilePanel=document.createElement('details');profilePanel.id='profile-panel';
 const profileSummary=document.createElement('summary');profileSummary.textContent='Настройки и профиль';profilePanel.append(profileSummary);
@@ -1288,7 +1321,7 @@ try{const saved=JSON.parse(localStorage.getItem('rikoshet-audio-mix-v2')||'{}');
 musicSettings.volume=audioMix.music;
 const musicController=typeof createMusicController==='function'?createMusicController({
   getContext:()=>{unlockAudio();return audioContext;},
-  getState:()=>({game,enabled:musicSettings.enabled,volume:musicSettings.volume,hidden:document.hidden || musicViewHidden}),
+  getState:()=>({game,enabled:musicSettings.enabled,volume:musicSettings.volume,hidden:document.hidden || musicViewHidden || splashShown}),
   baseURL:new URL('audio/runtime/',location.href),onStatus:text=>{$('music-status').textContent=text;}
 }):null;
 $('music-enabled').checked=musicSettings.enabled;$('music-volume').value=musicSettings.volume;
@@ -1725,6 +1758,13 @@ addEventListener('resize',updateBanner);
 addEventListener('pagehide',()=>bannerController?.setMode('off'));
 addEventListener('pageshow',()=>bannerController?.setMode(inVK?'vk':'off'));
 if(typeof peerSession!=='undefined')peerSession.init();
+document.querySelector('main').inert=true;gameHeader.inert=true;
+$('splash-enter').onclick=()=>{
+  splashShown=false;$('splash').hidden=true;document.body.classList.remove('splash-open');
+  document.querySelector('main').inert=false;gameHeader.inert=false;
+  unlockAudio();musicController?.unlock();if(feedbackSettings.sound)void soundController?.preload();
+  syncGameViewport();$('solo').focus();
+};
 connect();render();
 
 </script></body></html>

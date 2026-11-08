@@ -64,7 +64,7 @@ try {
     return result.result;
   }
   async function evaluate(expression){
-    const response=await call('Runtime.evaluate',{expression,returnByValue:true,awaitPromise:true});
+    const response=await call('Runtime.evaluate',{expression:"if(typeof splashShown!=='undefined' && splashShown)$('splash-enter').click();\n"+expression,returnByValue:true,awaitPromise:true,userGesture:true});
     assert.ok(!response.exceptionDetails,JSON.stringify(response.exceptionDetails));
     return response.result.value;
   }
@@ -81,6 +81,15 @@ try {
     await resize(390,844);
     await call('Page.navigate',{url:pathToFileURL(path.resolve('Релиз для GitHub Pages/'+entry+'.html')).href});
     await delay(500);
+    await screenshot(entry+'-splash');
+    const splashCheck=await call('Runtime.evaluate',{expression:"splashShown && $('splash-art').naturalWidth>0 && document.querySelector('main').inert && $('splash-enter').getBoundingClientRect().bottom<=innerHeight",returnByValue:true});
+    assert.ok(splashCheck.result.value,'Launch image and entry button visible before menu');
+    for(const [width,height] of [[320,568],[568,320],[1280,720]]){
+      await resize(width,height);
+      const bounds=await call('Runtime.evaluate',{expression:"['splash-title','splash-enter'].every(id=>{const r=$(id).getBoundingClientRect();return r.left>=0 && r.top>=0 && r.right<=innerWidth+1 && r.bottom<=innerHeight+1;})",returnByValue:true});
+      assert.ok(bounds.result.value,'Splash fits '+width+'x'+height);
+    }
+    await screenshot(entry+'-splash-wide');await resize(390,844);
     assert.equal(await evaluate("scheme.value"),entry==='web'?'direct':'thumb');
     assert.ok(await evaluate("$('online-menu').hidden && $('create').hidden && $('join').hidden"),'Solo release has no unavailable online actions');
       await evaluate("$('help').open=true;$('help-done').click();$('sound-enabled').checked=true;$('sound-enabled').onchange();$('haptics-enabled').checked=true;$('haptics-enabled').onchange()");

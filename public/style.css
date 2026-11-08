@@ -317,3 +317,35 @@ body.match .audio-switch { width:40px; flex:0 0 40px; }
 #duel-result[data-outcome=loss] { border-color:#879c8d; }
 #duel-result[data-outcome=loss] .duel-result-emblem { color:#9ab5aa; }
 @media (max-height:450px) { #duel-result { padding:10px; } .duel-result-emblem { display:none; } .duel-scoreboard { margin:8px 0; } .duel-scoreboard section { gap:4px; padding:7px 4px; } .duel-scoreboard strong { font-size:32px; } }
+
+/* Full launch artwork, separate from gameplay and its input surfaces. */
+body.splash-open > header, body.splash-open > main { visibility:hidden; }
+#splash { position:fixed; inset:0; z-index:20; width:100%; height:100dvh; overflow:auto; background:#03150d; color:#fff0d4; }
+#splash-art { position:absolute; inset:0; width:100%; height:100%; object-fit:contain; object-position:right center; }
+#splash::after { content:""; position:absolute; inset:0; background:linear-gradient(90deg,#04180fe8,transparent 70%); pointer-events:none; }
+#splash-content { position:relative; z-index:1; display:flex; flex-direction:column; justify-content:space-between; width:min(52%,620px); min-height:100%; padding:clamp(20px,7vh,70px) clamp(20px,5vw,75px); }
+.splash-kicker { font-size:10px; letter-spacing:.2em; font-weight:bold; color:#d3b382; }
+#splash-title { display:block; font:900 italic clamp(34px,6vw,80px)/.95 Arial,sans-serif; letter-spacing:-.055em; margin:22px 0; text-shadow:0 3px 20px #0008; }
+#splash-title small { display:block; font:700 16px/2 Arial,sans-serif; letter-spacing:.4em; color:#d5bd93; }
+#splash-title span { color:#ffad69; }
+.splash-heading p { font-size:clamp(14px,2vw,20px); line-height:1.45; color:#e1d5bf; }
+#splash-enter { width:100%; padding:15px 20px; border:1px solid #ffdb9b; background:linear-gradient(#ffcb8a,#e99455); color:#25190c; font-size:17px; font-weight:800; box-shadow:0 4px #6e4328,0 0 34px #ff9e3820; }
+#splash-enter span { float:right; }
+.splash-entry > small { display:block; margin-top:18px; text-align:center; color:#bbbfad; font-size:11px; line-height:1.5; }
+@media (orientation:portrait) {
+  #splash-art { object-fit:cover; object-position:center; }
+  #splash::after { background:linear-gradient(#02150c45,transparent 40%,transparent 70%,#02150ce8); }
+  #splash-content { width:100%; padding:calc(env(safe-area-inset-top) + 32px) 24px calc(env(safe-area-inset-bottom) + 30px); }
+  #splash-title { font-size:clamp(36px,10vw,64px); margin:12px 0; }
+  .splash-heading { text-align:center; }
+  .splash-heading p { font-size:14px; margin:10px 0; }
+  .splash-entry { width:min(100%,420px); align-self:center; }
+}
+@media (max-height:450px) and (orientation:landscape) {
+  #splash-content { padding:16px 24px; width:53%; }
+  #splash-title { font-size:34px; margin:8px 0; }
+  #splash-title small { font-size:11px; }
+  .splash-heading p { margin:6px 0; font-size:13px; }
+  .splash-entry > small { margin-top:10px; font-size:9px; }
+  #splash-enter { min-height:40px; padding:9px 12px; font-size:14px; }
+}
