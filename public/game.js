@@ -23,11 +23,23 @@ helpButton.onclick=()=>{if(!game)return;pauseSession(true);$('help-content').app
 function closeHelp(){helpDialog.close();profilePanel.append($('help'),$('settings'),$('gesture'));}
 $('close-help').onclick=closeHelp;
 helpDialog.addEventListener('cancel',e=>{e.preventDefault();closeHelp();});
+// Shared audio switches move into a separate HUD row during play.
+const audioPanel=document.createElement('section');audioPanel.id='audio-panel';
+const audioToolbar=document.createElement('div');audioToolbar.id='audio-toolbar';
+const musicIcon='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 17V5l11-2v12M9 8l11-2"/><ellipse cx="6" cy="18" rx="3" ry="2"/><ellipse cx="17" cy="16" rx="3" ry="2"/><path class="mute-slash" d="M3 3l18 18"/></svg>';
+const effectsIcon='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4zM16 9q4 3 0 6M19 5q7 7 0 14"/><path class="mute-slash" d="M3 3l18 18"/></svg>';
+audioToolbar.innerHTML='<span class="audio-caption">ЗВУК АРЕНЫ</span><button id="music-toggle" class="audio-switch" type="button">'+musicIcon+'<span>Музыка</span></button><button id="sound-toggle" class="audio-switch" type="button">'+effectsIcon+'<span>Эффекты</span></button>';
+const audioBalance=document.createElement('details');audioBalance.id='audio-balance';audioBalance.open=true;
+audioBalance.innerHTML='<summary>Баланс музыки и эффектов</summary>';
+for(const id of ['music-enabled','sound-enabled']){$(id).closest('label').hidden=true;audioBalance.append($(id).closest('label'));}
+for(const id of ['music-volume','sound-volume'])audioBalance.append($(id).closest('label'));
+audioBalance.append($('music-status'));audioPanel.append(audioToolbar,audioBalance);
+profilePanel.before(audioPanel);
 // Audio assets load after interaction; synthesized tones remain a loading fallback.
 let audioContext=null,lastTone=0,goalFlashUntil=0,goalFlashOwn=false;
 let previousBalls=[],sparks=[],trails=[],lastTrailTime=-1,lastHP=[],closedAt={};
-const feedbackSettings={sound:false,haptics:false,reduced:matchMedia('(prefers-reduced-motion: reduce)').matches};
-try{const saved=JSON.parse(localStorage.getItem('rikoshet-feedback')||'{}');feedbackSettings.sound=saved.sound===true;feedbackSettings.haptics=saved.haptics===true;if(typeof saved.reduced==='boolean')feedbackSettings.reduced=saved.reduced;}catch{}
+const feedbackSettings={sound:true,haptics:false,reduced:matchMedia('(prefers-reduced-motion: reduce)').matches};
+try{const saved=JSON.parse(localStorage.getItem('rikoshet-feedback')||'{}');if(typeof saved.sound==='boolean')feedbackSettings.sound=saved.sound;feedbackSettings.haptics=saved.haptics===true;if(typeof saved.reduced==='boolean')feedbackSettings.reduced=saved.reduced;}catch{}
 const transition=document.createElement('div');transition.id='wave-transition';transition.setAttribute('role','status');document.querySelector('.board').append(transition);
 let transitionUntil=0;
 function waveTransition(text){transition.textContent=text;transitionUntil=performance.now()+1400;}
@@ -40,7 +52,7 @@ function feedback(kind){
   if(document.hidden||musicViewHidden||(game?.paused && kind!=='click'))return;
   if(feedbackSettings.haptics && kind!=='bounce')try{navigator.vibrate?.(kind.startsWith('goal')?45:20);}catch{}
   const now=performance.now();
-  if(!feedbackSettings.sound||audioContext?.state!=='running')return;
+  if(!feedbackSettings.sound||audioMix.effects<=0||audioContext?.state!=='running')return;
   const heat=game && !game.solo?((game.balls[0]?.minSpeed||360)-360)/720:0;
   if(soundController?.play(kind,heat))return;
   if(now-lastTone<45)return;
@@ -49,29 +61,45 @@ function feedback(kind){
     const osc=audioContext.createOscillator(),gain=audioContext.createGain(),t=audioContext.currentTime;
     const frequency=kind.startsWith('goal')?130:kind==='perfect'?880:kind==='multi'?660:380;
     osc.frequency.setValueAtTime(frequency,t);osc.frequency.exponentialRampToValueAtTime(frequency*.55,t+.12);
-    gain.gain.setValueAtTime(.045,t);gain.gain.exponentialRampToValueAtTime(.001,t+.14);
+    gain.gain.setValueAtTime(.045*audioMix.effects,t);gain.gain.exponentialRampToValueAtTime(.001,t+.14);
     osc.connect(gain);gain.connect(audioContext.destination);osc.start(t);osc.stop(t+.15);
     osc.onended=()=>{osc.disconnect();gain.disconnect();};
   }catch{}
 }
 for(const [id,key] of [['sound-enabled','sound'],['haptics-enabled','haptics'],['reduced-effects','reduced']]){
   $(id).checked=feedbackSettings[key];
-  $(id).onchange=()=>{feedbackSettings[key]=$(id).checked;try{localStorage.setItem('rikoshet-feedback',JSON.stringify(feedbackSettings));}catch{}if(key==='reduced'){trails=[];sparks=[];return;}unlockAudio();if(key==='sound'){if(feedbackSettings.sound)void soundController?.preload();else soundController?.stop();}if(feedbackSettings[key])feedback('perfect');};
+  $(id).onchange=()=>{feedbackSettings[key]=$(id).checked;try{localStorage.setItem('rikoshet-feedback',JSON.stringify(feedbackSettings));}catch{}if(key==='reduced'){trails=[];sparks=[];return;}unlockAudio();if(key==='sound'){if(feedbackSettings.sound)void soundController?.preload();else soundController?.stop();}if(feedbackSettings[key])feedback('perfect');syncAudioUI();};
 }
-const soundController=typeof createSoundController==='function'?createSoundController({getContext:()=>{unlockAudio();return audioContext;},baseURL:new URL('audio/sfx/',location.href)}):null;
+const soundController=typeof createSoundController==='function'?createSoundController({getContext:()=>{unlockAudio();return audioContext;},getVolume:()=>audioMix.effects,baseURL:new URL('audio/sfx/',location.href)}):null;
 document.addEventListener('click',event=>{if(event.target.closest('button,summary'))feedback('click');});
 let musicViewHidden=false;
-const musicSettings={enabled:true,volume:.65};
+const musicSettings={enabled:true,volume:.25};
 try{Object.assign(musicSettings,JSON.parse(localStorage.getItem('rikoshet-music-v1')||'{}'));}catch{}
+const audioMix={music:.25,effects:.1};
+try{const saved=JSON.parse(localStorage.getItem('rikoshet-audio-mix-v2')||'{}');for(const key of ['music','effects'])if(Number.isFinite(saved[key]))audioMix[key]=Math.max(0,Math.min(1,saved[key]));}catch{}
+musicSettings.volume=audioMix.music;
 const musicController=typeof createMusicController==='function'?createMusicController({
   getContext:()=>{unlockAudio();return audioContext;},
   getState:()=>({game,enabled:musicSettings.enabled,volume:musicSettings.volume,hidden:document.hidden || musicViewHidden}),
   baseURL:new URL('audio/runtime/',location.href),onStatus:text=>{$('music-status').textContent=text;}
 }):null;
 $('music-enabled').checked=musicSettings.enabled;$('music-volume').value=musicSettings.volume;
-function saveMusic(){try{localStorage.setItem('rikoshet-music-v1',JSON.stringify(musicSettings));}catch{}musicController?.tick();}
+function saveMusic(){syncAudioUI();try{localStorage.setItem('rikoshet-music-v1',JSON.stringify(musicSettings));}catch{}musicController?.tick();}
 $('music-enabled').onchange=()=>{musicSettings.enabled=$('music-enabled').checked;saveMusic();musicController?.unlock();};
-$('music-volume').oninput=()=>{musicSettings.volume=Number($('music-volume').value);saveMusic();};
+function saveAudioMix(){try{localStorage.setItem('rikoshet-audio-mix-v2',JSON.stringify(audioMix));}catch{}syncAudioUI();}
+$('music-volume').oninput=()=>{audioMix.music=musicSettings.volume=Number($('music-volume').value);saveAudioMix();saveMusic();};
+$('sound-volume').oninput=()=>{audioMix.effects=Number($('sound-volume').value);saveAudioMix();soundController?.updateVolume();};
+$('music-toggle').onclick=()=>{$('music-enabled').checked=!musicSettings.enabled;$('music-enabled').onchange();};
+$('sound-toggle').onclick=()=>{$('sound-enabled').checked=!feedbackSettings.sound;$('sound-enabled').onchange();};
+function syncAudioUI(){
+  $('music-volume').value=musicSettings.volume;$('sound-volume').value=audioMix.effects;
+  $('music-volume-value').textContent=Math.round(musicSettings.volume*100)+'%';$('sound-volume-value').textContent=Math.round(audioMix.effects*100)+'%';
+  for(const [id,enabled,label,volume] of [['music-toggle',musicSettings.enabled,'Музыка',musicSettings.volume],['sound-toggle',feedbackSettings.sound,'Эффекты',audioMix.effects]]){
+    const button=$(id);button.setAttribute('aria-pressed',String(enabled));button.classList.toggle('muted',!enabled || volume===0);
+    button.title=label+': '+(enabled?Math.round(volume*100)+'%':'выключены');button.setAttribute('aria-label',(enabled?'Выключить: ':'Включить: ')+label);
+  }
+}
+syncAudioUI();
 addEventListener('visibilitychange',()=>{musicController?.tick();if(document.hidden)soundController?.stop();});
 addEventListener('pagehide',()=>{musicController?.stop();soundController?.stop();});
 bridge?.subscribe(event=>{const type=event.detail?.type;if(type==='VKWebAppViewHide' || type==='VKWebAppViewRestore'){musicViewHidden=type==='VKWebAppViewHide';musicController?.tick();if(musicViewHidden)soundController?.stop();}});
@@ -79,7 +107,8 @@ try{$('help').open=localStorage.getItem('rikoshet-help-seen')!=='1';}catch{$('he
 $('help-done').onclick=()=>{$('help').open=false;if(helpDialog.open)closeHelp();try{localStorage.setItem('rikoshet-help-seen','1');}catch{}};
 function controls(active){
   if(!active && helpDialog.open)closeHelp();
-  profilePanel.hidden=active;
+  profilePanel.hidden=active;audioPanel.hidden=active;
+  if(active && game)gameHeader.append(audioToolbar);else audioPanel.prepend(audioToolbar);
   if(active){gameHeader.prepend($('hud'));profilePanel.open=false;}else originalFooter.prepend($('hud'));
   $('ability').hidden=!game?.solo;
   if(active){$('result-summary').hidden=true;$('result-level').hidden=true;}

@@ -40,6 +40,14 @@ try{
     return result;
   }
   const a=await page();
+  assert.deepEqual(await a.evaluate('[musicSettings.volume,audioMix.effects]'),[.25,.1],'New default audio balance');
+  assert.ok(await a.evaluate("$('music-toggle').checkVisibility() && $('sound-toggle').checkVisibility() && $('music-volume').checkVisibility() && $('sound-volume').checkVisibility()"),'Audio controls visible in main menu');
+  await a.evaluate("$('sound-volume').value=.3;$('sound-volume').oninput();$('music-volume').value=.4;$('music-volume').oninput()");
+  assert.equal(await a.evaluate('soundController.inspect().volume'),.3);
+  await a.evaluate("$('music-toggle').click();$('sound-toggle').click()");
+  assert.ok(await a.evaluate("!musicSettings.enabled && !feedbackSettings.sound && $('music-toggle').getAttribute('aria-pressed')==='false' && $('sound-toggle').getAttribute('aria-pressed')==='false'"));
+  await a.evaluate("$('music-toggle').click();$('sound-toggle').click();feedbackSettings.sound=false");
+
   await a.call('Runtime.evaluate',{expression:"window.audioStarts=[];const originalStart=AudioBufferSourceNode.prototype.start;AudioBufferSourceNode.prototype.start=function(...args){audioStarts.push({when:args[0],duration:args[2],buffer:this.buffer.duration,rate:this.playbackRate.value});return originalStart.apply(this,args);};musicController.unlock()",userGesture:true});
   await a.until("musicController.inspect().scene==='menu' && musicController.inspect().loaded",20000);
   for(let n=0;n<3;n++){
@@ -74,6 +82,7 @@ try{
   assert.equal(await a.evaluate('soundController.inspect().voices'),0,'Disabling effects stops active voices');
   await a.call('Page.reload');await a.until("typeof online!=='undefined' && online");
   assert.equal(await a.evaluate('musicSettings.enabled'),false);
+  assert.deepEqual(await a.evaluate('[musicSettings.volume,audioMix.effects]'),[.4,.3],'Balance survives reload');
   assert.deepEqual(a.errors,[]);
   console.log('Music: real AAC decode, menu, three track rotations, synchronized stems, chunk boundary, heat, mute, six WAV effects, heat pitch and persistence OK');
 }finally{for(const s of sessions)s.ws.close();server.close();browser.kill();}

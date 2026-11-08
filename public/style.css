@@ -270,3 +270,30 @@ body.match #playing button { flex: 0 1 42px; min-width: 28px; }
 /* Avoid iOS automatic focus zoom when pasting a duel code. */
 #peer-panel textarea { font-size: 16px; }
 @media (pointer: coarse) { input, select, textarea { font-size: 16px; } }
+
+/* Brass-edged audio switches match the pinball cabinet. */
+#audio-panel { margin:8px 0; padding:9px; border:1px solid #657767; border-radius:9px; background:linear-gradient(135deg,#263b30,#14281f); }
+#audio-toolbar { display:flex; align-items:center; justify-content:flex-end; gap:6px; min-width:0; }
+.audio-caption { margin-right:auto; font-size:10px; font-weight:700; letter-spacing:.06em; color:#c3bc9d; }
+.audio-switch { display:flex; align-items:center; justify-content:center; gap:5px; min-height:38px; padding:6px 9px; border:1px solid #c49b63; background:linear-gradient(#4c4935,#29362a); color:#ffd49a; box-shadow:inset 0 1px #ffe0a42b,0 2px #09170e; }
+.audio-switch svg { width:21px; height:21px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; flex-shrink:0; }
+.audio-switch span { font-size:11px; color:inherit; }
+.audio-switch .mute-slash { display:none; }
+.audio-switch.muted { color:#a2aaa1; border-color:#647368; background:#1a2921; }
+.audio-switch.muted .mute-slash { display:block; stroke:#ff996b; }
+#audio-balance summary { padding:9px 0 3px; font-size:12px; }
+#audio-balance .scheme { display:grid; grid-template-columns:minmax(80px,1fr) minmax(70px,1.3fr) 36px; gap:7px; margin:9px 0; }
+#audio-balance input[type=range] { width:100%; }
+#audio-balance output { text-align:right; color:#ffd49a; font-size:12px; }
+body.match header { display:grid; grid-template-columns:minmax(0,1fr) auto; grid-template-rows:44px 36px; height:88px; padding:2px 8px; gap:2px 6px; }
+body.match header #hud { grid-column:1; grid-row:1; }
+body.match #playing { grid-column:2; grid-row:1; }
+body.match #audio-toolbar { grid-column:1 / -1; grid-row:2; }
+body.match .audio-switch { min-height:32px; height:32px; padding:3px 8px; }
+body.match .audio-caption { font-size:9px; }
+@media (max-height:540px) and (orientation:landscape) {
+  body.match header { grid-template-rows:40px 32px; height:78px; }
+}
+
+body.match .audio-switch span { display:none; }
+body.match .audio-switch { width:40px; flex:0 0 40px; }
