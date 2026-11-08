@@ -256,3 +256,17 @@ html.game-locked body { position: fixed; inset: 0; width: 100%; }
 body.match main, body.match header { touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
 canvas, #touchpad { -webkit-user-select: none; -webkit-touch-callout: none; }
 #help-dialog { touch-action: auto; -webkit-user-select: text; user-select: text; }
+
+/* Fit each player's visible viewport independently, including Safari focus zoom. */
+html.game-locked body {
+  inset: auto;
+  left: var(--game-left, 0px); top: var(--game-top, 0px);
+  width: var(--game-width, 100%); height: var(--game-height, 100dvh);
+}
+body.match header { min-width: 0; }
+body.match header #hud { min-width: 0; flex: 1 1 auto; overflow-wrap: anywhere; }
+body.match #playing { flex: 0 1 auto; min-width: 0; gap: 3px; }
+body.match #playing button { flex: 0 1 42px; min-width: 28px; }
+/* Avoid iOS automatic focus zoom when pasting a duel code. */
+#peer-panel textarea { font-size: 16px; }
+@media (pointer: coarse) { input, select, textarea { font-size: 16px; } }

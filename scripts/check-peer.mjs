@@ -57,9 +57,18 @@ try{
   await b.evaluate("window.dispatchEvent(new Event('blur'))");await a.until('game.paused');
   const paused=await a.evaluate('game.t');await delay(300);assert.equal(await a.evaluate('game.t'),paused);
   await b.evaluate("$('resume').click()");await a.until('!game.paused');
-  for(const [width,height] of [[320,568],[568,320],[390,844],[844,390]]){
-    await b.call('Emulation.setDeviceMetricsOverride',{width,height,deviceScaleFactor:1,mobile:false});await delay(200);
-    assert.ok(await b.evaluate(`[table,cabinet,$('hit'),$('pause')].every(el=>{const r=el.getBoundingClientRect();return r.width>0&&r.left>=0&&r.top>=0&&r.right<=innerWidth+1&&r.bottom<=innerHeight+1;})`),'Duel fits '+width+'x'+height);
+  // Each peer sizes itself, including a zoomed visual viewport after code entry.
+  for(const client of [a,b]){
+    await client.call('Page.bringToFront');
+    for(const [width,height] of [[320,568],[568,320],[390,660],[844,390]]){
+      await client.call('Emulation.setDeviceMetricsOverride',{width,height,deviceScaleFactor:1,mobile:true});
+      for(const scale of [1,1.5]){
+        await client.call('Emulation.setPageScaleFactor',{pageScaleFactor:scale});await delay(500);
+        assert.ok(await client.evaluate(`[table,cabinet,$('hit'),$('pause'),$('leave'),$('help-button'),$('touchpad')].every(el=>{const r=el.getBoundingClientRect(),v=visualViewport;return r.width>0&&r.left>=v.offsetLeft-1&&r.top>=v.offsetTop-1&&r.right<=v.offsetLeft+v.width+1&&r.bottom<=v.offsetTop+v.height+1;})`),'Duel fits '+width+'x'+height+' at zoom '+scale+' '+JSON.stringify(await client.evaluate("({viewport:[visualViewport.offsetLeft,visualViewport.offsetTop,visualViewport.width,visualViewport.height],rects:[table,cabinet,$('hit'),$('pause'),$('leave'),$('help-button'),$('touchpad')].map(el=>[el.id,el.getBoundingClientRect().toJSON()])})")));
+        assert.ok(await client.evaluate('Math.abs(table.getBoundingClientRect().width-table.getBoundingClientRect().height)<1'),'Arena remains square');
+      }
+      await client.call('Emulation.setPageScaleFactor',{pageScaleFactor:1});
+    }
   }
   await fs.mkdir('outputs/browser-check',{recursive:true});
   for(const [name,client] of [['peer-host',a],['peer-guest',b]]){

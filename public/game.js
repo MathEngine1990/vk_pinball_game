@@ -76,6 +76,7 @@ function controls(active){
   $('touchpad').hidden=!game || $('scheme').value!=='thumb';
   document.querySelectorAll('#menu button').forEach(b=>b.disabled=!online);
   updatePause();
+  syncGameViewport();
 }
 function progress(p){
   profile=p;const {xp,level:l,cost,remaining}=levelProgress(p.xp);
@@ -253,6 +254,19 @@ let resizeTimer;addEventListener('resize',()=>{clearTimeout(resizeTimer);resizeT
 
 // The playfield artwork is cached so mobile clients only redraw moving objects.
 const stage=document.querySelector('.stage'), cabinet=document.querySelector('.cabinet');
+// Safari can retain focus zoom after exchanging invitation codes. Fit the
+// visible viewport of this device, not only the larger layout viewport.
+function syncGameViewport(){
+  const viewport=window.visualViewport;
+  const style=document.documentElement.style;
+  for(const [key,value] of Object.entries({width:viewport?.width||innerWidth,height:viewport?.height||innerHeight,left:viewport?.offsetLeft||0,top:viewport?.offsetTop||0})){
+    style.setProperty('--game-'+key,value+'px');
+  }
+  fitArena();
+}
+window.visualViewport?.addEventListener('resize',syncGameViewport);
+window.visualViewport?.addEventListener('scroll',syncGameViewport);
+addEventListener('resize',syncGameViewport);
 function fitArena(){
   let width=Math.min(stage.clientWidth,stage.clientHeight,760);
   cabinet.style.width=width+'px';
