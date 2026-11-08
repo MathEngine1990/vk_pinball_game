@@ -226,3 +226,12 @@ test('solo reflection retains original speed and duel precise hits raise the flo
   const g=arena(false);g.pads[0].hit=0;g.balls=[{x:500,y:951,vx:0,vy:360}];step(g,1/120);
   assert.equal(g.balls[0].minSpeed,520);
 });
+
+
+test('custom duel target ends only at the chosen score, even after two minutes',()=>{
+  for(const limit of [3,5,7,10])for(const winner of [0,1]){
+    const g=arena(false);g.scoreLimit=limit;g.t=125;g.balls=[{x:500,y:500,vx:0,vy:0}];
+    g.score[winner]=limit-1;step(g,1/60);assert.equal(g.winner,null);
+    g.score[winner]=limit;step(g,1/60);assert.equal(g.winner,winner);
+  }
+});

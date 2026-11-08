@@ -7,6 +7,7 @@ function showSaveStatus(status){
     pending:'Изменения ожидают сохранения в VK.',unavailable:status.localOK?'VK пока не подтвердил сохранение. Копия есть на устройстве.':'VK и сохранение на устройстве недоступны. Не закрывай игру до повторной синхронизации.',
     conflict:'Найдены разные сохранения. Выбери, какое продолжить.'};
   $('save-note').textContent=messages[status.kind];
+  $('wave-result-save').textContent=messages[status.kind];
   $('sync-save').hidden=!status.cloud || !['pending','unavailable'].includes(status.kind);
   $('import-save').hidden=!status.canImport;
   $('save-conflict').hidden=status.kind!=='conflict';
@@ -30,7 +31,8 @@ function endLocal(finished){
   const won=finished && game.winner===0;
   const earned=finished?rewards(game,0):{xp:0,shards:0,wave:0};
   const wave=game.wave;
-  const summary={goals:game.playerGoals||0,missed:8-game.hp[0],perfect:game.pads[0].perfect,seconds:Math.floor(game.t),difficulty:game.difficulty,beforeXP:profile.xp};
+  const reason=!finished?'Ты завершил волну досрочно.':game.hp[0]<=0?'Твои ворота разрушены. Попробуй ещё раз.':game.hp.slice(1).every(h=>h<=0)?'Все соперники выбиты. Арена твоя!':won?'Время вышло. Ты удержал лидерство по прочности ворот.':'Время вышло. Соперник сохранил больше прочности ворот.';
+  const summary={reason,hp:Math.max(0,game.hp[0]),goals:game.playerGoals||0,missed:8-game.hp[0],perfect:game.pads[0].perfect,seconds:Math.floor(game.t),difficulty:game.difficulty,beforeXP:profile.xp};
   profile.xp+=earned.xp;profile.shards+=earned.shards;profile.wave+=earned.wave;
   if(finished)store.save(profile);
   game=null;resetInput();controls(false);progress(profile);

@@ -17,6 +17,7 @@ function stop(text){
   if(!active())return;
   hideDuelResult();reset();game=null;seat=0;networkWaiting=false;confirmExit=false;resetInput();controls(false);
   if(accountLabel)$('account').textContent=accountLabel;
+  $('peer-target-setting').hidden=false;$('peer-target').disabled=false;
   $('peer-panel').hidden=false;$('peer-actions').hidden=false;$('peer-output-box').hidden=true;
   $('peer-apply').hidden=true;$('peer-start').hidden=true;
   for(const id of ['peer-host','peer-join'])$(id).disabled=false;
@@ -35,14 +36,14 @@ function end(winner,finalScore){
 function snapshot(){transmit({type:'state',game:hostGame});}
 function begin(){
   if(role!=='host' || !channel || channel.readyState!=='open' || started)return;
-  started=true;game=hostGame=arena(false);hostGame.skins=[profile?.skin||'amber','amber'];
+  started=true;game=hostGame=arena(false);hostGame.scoreLimit=[3,5,7,10].includes(Number($('peer-target').value))?Number($('peer-target').value):7;hostGame.skins=[profile?.skin||'amber','amber'];
   seat=0;target=500;resetInput();resetFeedback();controls(true);$('peer-panel').hidden=true;
-  $('mode').textContent='ДУЭЛЬ · ТЫ ХОСТ';$('hint').textContent='Твои ворота снизу. Забей 7 голов. При сворачивании — общая пауза.';
+  $('mode').textContent='ДУЭЛЬ · ТЫ ХОСТ';$('hint').textContent='Твои ворота снизу. Набери '+hostGame.scoreLimit+' очков. При сворачивании — общая пауза.';
   snapshot();
 }
 function validState(g){
   const finite=n=>typeof n==='number' && Number.isFinite(n);
-  return g && g.solo===false && finite(g.t) && g.t>=0 && g.t<86400 && typeof g.paused==='boolean' &&
+  return g && (g.scoreLimit===undefined || [3,5,7,10].includes(g.scoreLimit)) && g.solo===false && finite(g.t) && g.t>=0 && g.t<86400 && typeof g.paused==='boolean' &&
     Array.isArray(g.score)&&g.score.length===2&&g.score.every(n=>Number.isInteger(n)&&n>=0&&n<=100) &&
     Array.isArray(g.hp)&&g.hp.length===4 && Array.isArray(g.pads)&&g.pads.length===2&&g.pads.every(p=>p && finite(p.x)&&p.x>=0&&p.x<=1000&&finite(p.hit)&&Number.isInteger(p.perfect)&&p.perfect>=0) &&
     Array.isArray(g.balls)&&g.balls.length>=1&&g.balls.length<=3&&g.balls.every(b=>b && ['x','y','vx','vy'].every(k=>finite(b[k])&&Math.abs(b[k])<=2000)) &&
@@ -71,7 +72,7 @@ function receive(event){
     const fresh=!started;started=true;game=m.game;seat=1;
     if(fresh){target=500;resetInput();resetFeedback();}
     controls(true);$('peer-panel').hidden=true;$('mode').textContent='ДУЭЛЬ · ДРУГ — ХОСТ';
-    $('hint').textContent='Твои ворота снизу. Забей 7 голов. Хост рассчитывает матч.';
+    $('hint').textContent='Твои ворота снизу. Набери '+(game.scoreLimit || 7)+' очков. Хост рассчитывает матч.';
     if(document.hidden && !game.paused)transmit({type:'pause'});
   }
 }
@@ -111,6 +112,7 @@ function create(roleName){
     }else if(pc.connectionState==='connected')clearTimeout(linkTimer);
   };
   pc.ondatachannel=e=>attach(e.channel);
+  $('peer-target-setting').hidden=roleName==='guest';$('peer-target').disabled=false;
   $('peer-actions').hidden=true;$('peer-panel').hidden=false;$('peer-start').hidden=true;$('peer-output-box').hidden=true;
   controls(true);$('playing').hidden=true;$('peer-panel').hidden=false;
   setupTimer=setTimeout(()=>stop('Время приглашения истекло. Создай новое приглашение.'),30*60*1000);

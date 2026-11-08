@@ -15,6 +15,7 @@
 <small>Коды действуют 30 минут. Передавай их только другу: они содержат данные сетевого соединения. При прямой связи соперник может узнать твой IP.</small>
 <p id="peer-status" role="status">Выбери действие. Оставляй игру открытой во время обмена кодами.</p>
 <label for="peer-input">Код от друга</label><textarea id="peer-input" maxlength="100000" rows="3" placeholder="Вставь полный код RK1.…" spellcheck="false" autocapitalize="off"></textarea>
+<label id="peer-target-setting" class="scheme">Цель дуэли · выбирает хозяин <select id="peer-target"><option value="3">3 очка</option><option value="5">5 очков</option><option value="7" selected>7 очков</option><option value="10">10 очков</option></select></label>
 <div id="peer-actions"><button id="peer-host">Я хозяин · создать приглашение</button><button id="peer-join">Я гость · создать ответ</button></div>
 <button id="peer-apply" hidden>Я хозяин · принять ответ друга</button>
 <div id="peer-output-box" hidden><label for="peer-output">Твой код — отправь другу целиком</label><textarea id="peer-output" rows="3" readonly spellcheck="false"></textarea><button id="peer-copy">Скопировать код</button></div>

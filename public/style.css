@@ -298,11 +298,11 @@ body.match .audio-caption { font-size:9px; }
 body.match .audio-switch span { display:none; }
 body.match .audio-switch { width:40px; flex:0 0 40px; }
 
-#duel-result { width:min(440px,calc(var(--game-width,100vw) - 20px)); max-height:calc(var(--game-height,100dvh) - 20px); box-sizing:border-box; overflow:auto; margin:auto; padding:18px; color:#f6edd9; border:2px solid #cba46e; border-radius:14px; background:radial-gradient(ellipse at top,#3a5140,#10291f 75%); box-shadow:0 0 0 4px #0c1d16,0 20px 70px #000b; text-align:center; }
-#duel-result::backdrop { background:#06120bd9; }
+:is(#duel-result,#wave-result) { width:min(440px,calc(var(--game-width,100vw) - 20px)); max-height:calc(var(--game-height,100dvh) - 20px); box-sizing:border-box; overflow:auto; margin:auto; padding:18px; color:#f6edd9; border:2px solid #cba46e; border-radius:14px; background:radial-gradient(ellipse at top,#3a5140,#10291f 75%); box-shadow:0 0 0 4px #0c1d16,0 20px 70px #000b; text-align:center; }
+:is(#duel-result,#wave-result)::backdrop { background:#06120bd9; }
 .duel-result-top { font-size:10px; letter-spacing:.14em; color:#d4bf94; }
 .duel-result-emblem { font-size:42px; color:#ffbf79; line-height:1.2; margin:10px 0 4px; }
-#duel-result h2 { margin:8px 0; font:900 italic clamp(17px,4vw,26px)/1.12 Arial,sans-serif; color:#ffd39b; }
+:is(#duel-result,#wave-result) h2 { margin:8px 0; font:900 italic clamp(17px,4vw,26px)/1.12 Arial,sans-serif; color:#ffd39b; }
 #duel-result-note { font-size:13px; line-height:1.4; color:#d0d8c8; }
 .duel-scoreboard { display:grid; grid-template-columns:minmax(0,1fr) 16px minmax(0,1fr); align-items:center; gap:6px; margin:18px 0 12px; }
 .duel-scoreboard section { display:flex; flex-direction:column; gap:8px; padding:12px 4px; border-radius:8px; background:#091b16; border:1px solid #627367; }
@@ -314,9 +314,9 @@ body.match .audio-switch { width:40px; flex:0 0 40px; }
 .duel-score-separator { font:700 30px monospace; color:#9aa68e; }
 .duel-result-footer { font-size:10px; line-height:1.4; color:#aab9a9; }
 #duel-result-menu { position:sticky; bottom:0; width:100%; margin-top:8px; background:linear-gradient(#ffc180,#e59458); color:#251d13; border-color:#ffd49a; min-height:44px; }
-#duel-result[data-outcome=loss] { border-color:#879c8d; }
-#duel-result[data-outcome=loss] .duel-result-emblem { color:#9ab5aa; }
-@media (max-height:450px) { #duel-result { padding:10px; } .duel-result-emblem { display:none; } .duel-scoreboard { margin:8px 0; } .duel-scoreboard section { gap:4px; padding:7px 4px; } .duel-scoreboard strong { font-size:32px; } }
+:is(#duel-result,#wave-result)[data-outcome=loss] { border-color:#879c8d; }
+:is(#duel-result,#wave-result)[data-outcome=loss] .duel-result-emblem { color:#9ab5aa; }
+@media (max-height:450px) { :is(#duel-result,#wave-result) { padding:10px; } .duel-result-emblem { display:none; } .duel-scoreboard { margin:8px 0; } .duel-scoreboard section { gap:4px; padding:7px 4px; } .duel-scoreboard strong { font-size:32px; } }
 
 /* Full launch artwork, separate from gameplay and its input surfaces. */
 body.splash-open > header, body.splash-open > main { visibility:hidden; }
@@ -349,3 +349,15 @@ body.splash-open > header, body.splash-open > main { visibility:hidden; }
   .splash-entry > small { margin-top:10px; font-size:9px; }
   #splash-enter { min-height:40px; padding:9px 12px; font-size:14px; }
 }
+
+#wave-result-reward { margin:14px 0; padding:12px 8px; border:1px solid #a78c5c; border-radius:8px; background:#0b2119; color:#ffcf8e; font-weight:bold; font-size:16px; }
+.wave-result-stats { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:7px; }
+.wave-result-stats span { padding:8px 4px; background:#0a2018; border:1px solid #436353; border-radius:6px; color:#bacbbc; font-size:11px; }
+.wave-result-stats b { display:block; color:#f7e8cc; font-size:21px; margin-top:4px; }
+#wave-result-level { font-size:12px; line-height:1.4; }
+#wave-result-reason { font-size:13px; line-height:1.4; }
+#wave-result-save { display:block; font-size:10px; line-height:1.4; color:#aab9a9; }
+.wave-result-actions { display:grid; gap:7px; position:sticky; bottom:0; margin-top:13px; padding-top:6px; background:#132c21; }
+#wave-result-next { min-height:44px; background:linear-gradient(#ffc180,#e59458); color:#251d13; border-color:#ffd49a; }
+#wave-result-menu { min-height:40px; }
+#wave-result[data-outcome=exit] #wave-result-reward { font-size:13px; }

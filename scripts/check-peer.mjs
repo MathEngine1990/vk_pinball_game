@@ -33,7 +33,7 @@ try{
   }
   const a=await page(),b=await page();
   const profiles=await Promise.all([a.evaluate('JSON.stringify(profile)'),b.evaluate('JSON.stringify(profile)')]);
-  await a.evaluate("$('peer-entry').click();$('peer-host').click()");
+  await a.evaluate("$('peer-entry').click();$('peer-target').value='10';$('peer-host').click()");
   await a.until("$('peer-output').value.startsWith('RK1.')");
   assert.ok(await a.evaluate("$('peer-output').checkVisibility() && $('peer-cancel').checkVisibility()"),'Host code and cancel must be visible before match');
   const offer=await a.evaluate("$('peer-output').value");
@@ -50,6 +50,7 @@ try{
   await a.evaluate("$('peer-input').value="+JSON.stringify(answer)+";$('peer-apply').click()");
   await a.until("!$('peer-start').hidden",30000);
   await a.evaluate("$('peer-start').click()");await b.until('game && !game.solo');
+  assert.equal(await a.evaluate('game.scoreLimit'),10);assert.equal(await b.evaluate('game.scoreLimit'),10);
   assert.equal(await a.evaluate('seat'),0);assert.equal(await b.evaluate('seat'),1);
   await a.evaluate('target=800');await b.evaluate('target=200');await delay(500);
   assert.ok(await a.evaluate('game.pads[0].x>700 && game.pads[1].x<300'));
@@ -86,11 +87,12 @@ try{
     assert.deepEqual(await b.evaluate('game.balls'),await a.evaluate('game.balls'),'Duel stays connected with one synchronized ball after former spawn times');
   }
   await b.evaluate("$('resume').click()");await a.until('!game.paused');
-  await a.evaluate('game.score=[7,2]');await a.until('duelResultDialog.open');await b.until('duelResultDialog.open');
+  await a.evaluate('game.score=[9,2]');await delay(150);assert.ok(await a.evaluate('game.winner===null'),'Custom target does not end at the old score or time limit');
+  await a.evaluate('game.score=[10,2]');await a.until('duelResultDialog.open');await b.until('duelResultDialog.open');
   assert.equal(await a.evaluate("$('duel-winner-name').textContent"),'ТЫ');
   assert.equal(await b.evaluate("$('duel-loser-name').textContent"),'ТЫ');
   for(const client of [a,b]){
-    assert.deepEqual(await client.evaluate("[$('duel-winner-score').textContent,$('duel-loser-score').textContent]"),['7','2'],'Final score delivered with result');
+    assert.deepEqual(await client.evaluate("[$('duel-winner-score').textContent,$('duel-loser-score').textContent]"),['10','2'],'Final score delivered with result');
     assert.ok(await client.evaluate('game && game.paused && game.winner===0 && inRoom'),'Arena retained behind result');
     for(const [width,height] of [[320,568],[568,320],[390,660]]){
       await client.call('Emulation.setDeviceMetricsOverride',{width,height,deviceScaleFactor:1,mobile:true});await delay(200);
@@ -105,13 +107,14 @@ try{
   assert.ok(await b.evaluate('duelResultDialog.open && game'),'Opponent leaving cannot dismiss your result');
   await b.evaluate("$('duel-result-menu').click()");await b.until('!game');
   assert.equal(await a.evaluate('JSON.stringify(profile)'),profiles[0]);assert.equal(await b.evaluate('JSON.stringify(profile)'),profiles[1]);
-  await a.evaluate("$('peer-host').click()");await a.until("$('peer-output').value.startsWith('RK1.')");
+  await a.evaluate("$('peer-target').value='3';$('peer-host').click()");await a.until("$('peer-output').value.startsWith('RK1.')");
   const nextOffer=await a.evaluate("$('peer-output').value");
   await b.evaluate("$('peer-input').value="+JSON.stringify(nextOffer)+";$('peer-join').click()");await b.until("$('peer-output').value.startsWith('RK1.')");
   const nextAnswer=await b.evaluate("$('peer-output').value");
   await a.evaluate("$('peer-input').value="+JSON.stringify(nextAnswer)+";$('peer-apply').click()");await a.until("!$('peer-start').hidden");
   await a.evaluate("$('peer-start').click()");await b.until('game && !game.solo');
-  await a.evaluate('game.score=[1,7]');await a.until('duelResultDialog.open');await b.until('duelResultDialog.open');
+  assert.equal(await b.evaluate('game.scoreLimit'),3,'New match receives the new target');
+  await a.evaluate('game.score=[1,3]');await a.until('duelResultDialog.open');await b.until('duelResultDialog.open');
   assert.equal(await a.evaluate("$('duel-loser-name').textContent"),'ТЫ');
   assert.equal(await b.evaluate("$('duel-winner-name').textContent"),'ТЫ');
   for(const client of [a,b])await client.evaluate("$('duel-result-menu').click()");

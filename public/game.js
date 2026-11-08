@@ -55,6 +55,27 @@ function hideDuelResult(){if(duelResultDialog.open)duelResultDialog.close();}
 function leaveDuelResult(){peerSession.send({type:'leave'});}
 $('duel-result-menu').onclick=leaveDuelResult;
 duelResultDialog.addEventListener('cancel',event=>{event.preventDefault();leaveDuelResult();});
+const waveResultDialog=document.createElement('dialog');waveResultDialog.id='wave-result';waveResultDialog.setAttribute('aria-labelledby','wave-result-title');
+waveResultDialog.innerHTML='<div class="duel-result-top">АРЕНА / РИКОШЕТ · ИТОГИ ВОЛНЫ</div><div class="duel-result-emblem" aria-hidden="true">✦</div><h2 id="wave-result-title"></h2><p id="wave-result-reason"></p><div id="wave-result-reward"></div><div class="wave-result-stats"><span>Время<b id="wave-result-time"></b></span><span>Свои ворота<b id="wave-result-hp"></b></span><span>Твои голы<b id="wave-result-goals"></b></span><span>Точные удары<b id="wave-result-perfect"></b></span></div><p id="wave-result-level"></p><small id="wave-result-save" role="status"></small><div class="wave-result-actions"><button id="wave-result-next"></button><button id="wave-result-menu">В меню</button></div>';
+document.body.append(waveResultDialog);
+function showWaveResult(result){
+  if(helpDialog.open)closeHelp();
+  const s=result.summary;waveResultDialog.dataset.outcome=result.reward?(result.won?'win':'loss'):'exit';
+  $('wave-result-title').textContent=!result.reward?'ВОЛНА ПРЕРВАНА':'ВОЛНА '+result.wave+(result.won?' ПРОЙДЕНА':' НЕ ПРОЙДЕНА');
+  $('wave-result-reason').textContent=s.reason || (result.won?'Арена выдержала твой натиск. Следующая волна ждёт.':'Новый заход — новый шанс удержать ворота.');
+  $('wave-result-reward').textContent=result.reward?'+'+result.earned.xp+' опыта · +'+result.earned.shards+' осколков':'За прерванную волну награда не начисляется';
+  $('wave-result-time').textContent=s.seconds+' с';$('wave-result-hp').textContent=s.hp===undefined?Math.max(0,8-s.missed)+'/8':s.hp+'/8';
+  $('wave-result-goals').textContent=s.goals;$('wave-result-perfect').textContent=s.perfect;
+  $('wave-result-level').textContent=$('result-level').textContent;
+  $('wave-result-save').textContent=$('save-note').textContent;
+  $('wave-result-next').textContent=result.reward && result.won?'Следующая волна · '+profile.wave:'Повторить волну · '+profile.wave;
+  $('wave-result-next').disabled=!online;
+  if(!waveResultDialog.open)waveResultDialog.showModal();
+  $('wave-result-menu').focus();
+}
+$('wave-result-menu').onclick=()=>{waveResultDialog.close();$('solo').focus();};
+$('wave-result-next').onclick=()=>{if(!online || game || inRoom)return;waveResultDialog.close();start('solo');};
+waveResultDialog.addEventListener('cancel',event=>{event.preventDefault();$('wave-result-menu').click();});
 // Audio assets load after interaction; synthesized tones remain a loading fallback.
 let audioContext=null,lastTone=0,goalFlashUntil=0,goalFlashOwn=false;
 let previousBalls=[],sparks=[],trails=[],lastTrailTime=-1,lastHP=[],closedAt={};
@@ -128,6 +149,7 @@ $('help-done').onclick=()=>{$('help').open=false;if(helpDialog.open)closeHelp();
 function controls(active){
   if(!active && helpDialog.open)closeHelp();
   profilePanel.hidden=active;audioPanel.hidden=active;
+  $('wave-result-next').disabled=active || !online;
   if(active && game)gameHeader.append(audioToolbar);else audioPanel.prepend(audioToolbar);
   if(active){gameHeader.prepend($('hud'));profilePanel.open=false;}else originalFooter.prepend($('hud'));
   $('ability').hidden=!game?.solo;
@@ -240,6 +262,7 @@ function showResult(result){
   $('hint').textContent=result.won?'Отличный рикошет. Готов к следующей волне?':'Защищай свои ворота и направляй шар краем отражателя.';
   $('mode').textContent='МЕЖДУ ВОЛНАМИ';
   if(result.saved===false)$('save-note').textContent='Браузер не разрешил сохранение. Прогресс доступен до закрытия игры.';
+  if(result.summary)showWaveResult(result);
 }
 $('leave').onclick=()=>{
   if(game?.solo){confirmExit=true;pauseSession(true);updatePause();}
@@ -512,7 +535,7 @@ function render(){
   $('hit').title=$('hit-label').textContent;$('hit').setAttribute('aria-label',$('hit-label').textContent);
   $('hit-meter').style.width=(Math.max(0,Math.min(1,elapsed/.8))*100)+'%';
   $('hit').disabled=!pad || elapsed<.8 || Boolean(game?.paused) || networkWaiting;
-  $('hud').textContent=!game?'ВОЛНА '+String(profile?.wave||1).padStart(2,'0'):game.solo?'Волна '+game.wave+' · Прочность '+game.hp[0]+' · '+Math.ceil(150-game.t)+' с':game.score[seat]+' : '+game.score[1-seat]+' · '+(game.t<120?Math.ceil(120-game.t)+' с':'Овертайм');
+  $('hud').textContent=!game?'ВОЛНА '+String(profile?.wave||1).padStart(2,'0'):game.solo?'Волна '+game.wave+' · Прочность '+game.hp[0]+' · '+Math.ceil(150-game.t)+' с':game.score[seat]+' : '+game.score[1-seat]+' · '+(game.scoreLimit?'до '+game.scoreLimit:game.t<120?Math.ceil(120-game.t)+' с':'Овертайм');
   requestAnimationFrame(render);
 }
 // Automatic VK banner; diagnostic history stays internal, never in player settings.

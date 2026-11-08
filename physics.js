@@ -146,7 +146,7 @@ export function step(g,dt) {
   if(g.solo) {
     if(g.hp[0]<=0 || g.hp.slice(1).every(h=>h<=0) || g.t>=(rules?.duration || 150))
       g.winner=g.hp[0]>0 && g.hp[0]>=Math.max(...g.hp.slice(1))?0:1;
-  } else if(Math.max(...g.score)>=7 || (g.t>=120 && g.score[0]!==g.score[1]))
+  } else if(Math.max(...g.score)>=(g.scoreLimit || 7) || (!g.scoreLimit && g.t>=120 && g.score[0]!==g.score[1]))
     g.winner=g.score[0]>g.score[1]?0:1;
 }
 
