@@ -35,12 +35,14 @@ try{
   const profiles=await Promise.all([a.evaluate('JSON.stringify(profile)'),b.evaluate('JSON.stringify(profile)')]);
   await a.evaluate("$('peer-entry').click();$('peer-host').click()");
   await a.until("$('peer-output').value.startsWith('RK1.')");
+  assert.ok(await a.evaluate("$('peer-output').checkVisibility() && $('peer-cancel').checkVisibility()"),'Host code and cancel must be visible before match');
   const offer=await a.evaluate("$('peer-output').value");
   assert.deepEqual(await a.evaluate('testPeers[0].getConfiguration().iceServers'),[],'No STUN or TURN');
   await b.evaluate("$('peer-entry').click();$('peer-input').value='invalid';$('peer-join').click()");
   assert.ok(await b.evaluate("!peerSession.active() && $('peer-status').textContent.includes('RK1.')"));
   await b.evaluate("$('peer-input').value="+JSON.stringify(offer)+";$('peer-join').click()");
   await b.until("$('peer-output').value.startsWith('RK1.')");
+  assert.ok(await b.evaluate("$('peer-output').checkVisibility() && $('peer-cancel').checkVisibility()"),'Guest code and cancel must be visible before match');
   const answer=await b.evaluate("$('peer-output').value");
   const wrong=JSON.parse(atob(answer.slice(4)));wrong.room='0'.repeat(24);
   await a.evaluate("$('peer-input').value="+JSON.stringify('RK1.'+btoa(JSON.stringify(wrong)))+";$('peer-apply').click()");

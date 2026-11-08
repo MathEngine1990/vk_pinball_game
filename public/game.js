@@ -68,7 +68,7 @@ function controls(active){
   $('find').disabled=!online;
   $('peer-entry').hidden=active || networkMode;$('peer-entry').disabled=!online;
   if(active && (game || typeof peerSession==='undefined' || !peerSession.active()))$('peer-panel').hidden=true;
-  $('hit').disabled=!game;document.body.classList.toggle('match',active);
+  $('hit').disabled=!game;document.body.classList.toggle('match',active && Boolean(game));
   if(active)$('result').hidden=true;
   $('pause').hidden=!game?.solo && !(typeof peerSession!=='undefined' && peerSession.active() && game);
   $('touchpad').hidden=!game || $('scheme').value!=='thumb';

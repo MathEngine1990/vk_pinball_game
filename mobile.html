@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="ru"><head><meta charset="utf-8"><meta name="rikoshet-release" content="047f96628966"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Арена: Рикошет</title><style>
+<html lang="ru"><head><meta charset="utf-8"><meta name="rikoshet-release" content="fcf09cf31b14"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Арена: Рикошет</title><style>
 :root {
   color-scheme: dark;
   font: 15px Arial, sans-serif;
@@ -250,6 +250,8 @@ body.match #energy-note { display:none; }
   body.match #magnet { height:40px; min-height:40px; }
 }
 
+#peer-cancel { position: sticky; top: 0; z-index: 1; }
+
 </style></head>
 <body><header><b><i>◉</i> АРЕНА: РИКОШЕТ</b><span id="account" hidden></span></header>
 <main><section class="panel"><small>ПИНБОЛ • АРКАДА</small><h1>РИКОШЕТ<span>.</span></h1>
@@ -260,6 +262,7 @@ body.match #energy-note { display:none; }
 
 <button id="peer-entry" hidden>Дуэль с другом · обмен кодами</button>
 <section id="peer-panel" hidden>
+<button id="peer-cancel">Назад / закрыть дуэль</button>
 <b>Прямая дуэль 1 на 1</b><p>Хозяин рассчитывает матч. Без рейтинга и наград. Лучше пробовать в одной Wi-Fi-сети: через разные сети подключение может не получиться. Серверов-посредников нет.</p>
 <p>1. Хозяин создаёт приглашение и отправляет код другу.<br>2. Друг вставляет его, создаёт ответ и отправляет ответ хозяину.<br>3. Хозяин принимает ответ и начинает матч.</p>
 <small>Коды действуют 30 минут. Передавай их только другу: они содержат данные сетевого соединения. При прямой связи соперник может узнать твой IP.</small>
@@ -268,7 +271,7 @@ body.match #energy-note { display:none; }
 <div id="peer-actions"><button id="peer-host">Я хозяин · создать приглашение</button><button id="peer-join">Я гость · создать ответ</button></div>
 <button id="peer-apply" hidden>Я хозяин · принять ответ друга</button>
 <div id="peer-output-box" hidden><label for="peer-output">Твой код — отправь другу целиком</label><textarea id="peer-output" rows="3" readonly spellcheck="false"></textarea><button id="peer-copy">Скопировать код</button></div>
-<button id="peer-start" hidden>Начать матч</button><button id="peer-cancel">Отмена / закрыть дуэль</button>
+<button id="peer-start" hidden>Начать матч</button>
 </section>
 <section id="online-menu"><button id="find">Найти соперника</button><details id="ranking"><summary>Рейтинг игроков</summary><button id="refresh-ranking">Обновить рейтинг</button><div id="rank-list">Рейтинговые матчи учитываются после поиска соперника. Дуэли с друзьями не меняют рейтинг.</div></details></section>
 <section id="queue-status" hidden role="status"><b>Поиск соперника…</b><p>Чем дольше поиск, тем шире диапазон рейтинга.</p><button id="cancel-search">Отменить поиск</button></section>
@@ -1007,7 +1010,7 @@ function controls(active){
   $('find').disabled=!online;
   $('peer-entry').hidden=active || networkMode;$('peer-entry').disabled=!online;
   if(active && (game || typeof peerSession==='undefined' || !peerSession.active()))$('peer-panel').hidden=true;
-  $('hit').disabled=!game;document.body.classList.toggle('match',active);
+  $('hit').disabled=!game;document.body.classList.toggle('match',active && Boolean(game));
   if(active)$('result').hidden=true;
   $('pause').hidden=!game?.solo && !(typeof peerSession!=='undefined' && peerSession.active() && game);
   $('touchpad').hidden=!game || $('scheme').value!=='thumb';

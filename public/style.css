@@ -247,3 +247,5 @@ body.match #energy-note { display:none; }
   body.match #touchpad { height:40px; font-size:10px; }
   body.match #magnet { height:40px; min-height:40px; }
 }
+
+#peer-cancel { position: sticky; top: 0; z-index: 1; }
