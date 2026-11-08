@@ -83,8 +83,8 @@ export function step(g,dt) {
   if(g.winner!==null || g.paused) return;
   g.t+=dt;
   const rules=g.rules;
-  const additions=(rules?.ballsAt || [35,70]).filter(time=>g.t>=time).length;
-  if(g.solo && g.balls.length<1+additions) g.balls.push(serve(rules?.speed));
+  const additions=(g.solo ? (rules?.ballsAt || [35,70]) : [30,60]).filter(time=>g.t>=time).length;
+  if(g.balls.length<1+additions) g.balls.push(serve(rules?.speed));
   g.pads.forEach((p,i)=>{
     const bot=g.solo && i>0;
     if(bot && g.t >= (p.nextThink || 0)) {

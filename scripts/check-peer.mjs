@@ -74,6 +74,14 @@ try{
   for(const [name,client] of [['peer-host',a],['peer-guest',b]]){
     const shot=await client.call('Page.captureScreenshot',{format:'png'});await fs.writeFile('outputs/browser-check/'+name+'.png',Buffer.from(shot.data,'base64'));
   }
+  for(const [time,count] of [[30,2],[60,3]]){
+    await a.evaluate(`game.t=${time}-.01;game.paused=false`);
+    await a.until(`game.balls.length===${count}`);
+    await a.evaluate('game.paused=true');
+    await b.until(`game.balls.length===${count} && game.paused`);
+    assert.deepEqual(await b.evaluate('game.balls'),await a.evaluate('game.balls'),'Guest receives every ball from host');
+  }
+  await b.evaluate("$('resume').click()");await a.until('!game.paused');
   await a.evaluate('game.score=[7,0]');await a.until('!game');await b.until('!game');
   assert.equal(await a.evaluate("$('result-title').textContent"),'Победа в дуэли!');
   assert.equal(await b.evaluate("$('result-title').textContent"),'Друг выиграл дуэль');

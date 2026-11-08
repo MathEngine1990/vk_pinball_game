@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="ru"><head><meta charset="utf-8"><meta name="rikoshet-release" content="f2261958483d"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Арена: Рикошет</title><style>
+<html lang="ru"><head><meta charset="utf-8"><meta name="rikoshet-release" content="6a56a5a8361c"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Арена: Рикошет</title><style>
 :root {
   color-scheme: dark;
   font: 15px Arial, sans-serif;
@@ -284,7 +284,7 @@ body.match #playing button { flex: 0 1 42px; min-width: 28px; }
 <button id="peer-entry" hidden>Дуэль с другом · обмен кодами</button>
 <section id="peer-panel" hidden>
 <button id="peer-cancel">Назад / закрыть дуэль</button>
-<b>Прямая дуэль 1 на 1</b><p>Хозяин рассчитывает матч. Без рейтинга и наград. Лучше пробовать в одной Wi-Fi-сети: через разные сети подключение может не получиться. Серверов-посредников нет.</p>
+<b>Прямая дуэль 1 на 1</b><p>Второй шар — через 30 секунд игры, третий — через 60.</p><p>Хозяин рассчитывает матч. Без рейтинга и наград. Лучше пробовать в одной Wi-Fi-сети: через разные сети подключение может не получиться. Серверов-посредников нет.</p>
 <p>1. Хозяин создаёт приглашение и отправляет код другу.<br>2. Друг вставляет его, создаёт ответ и отправляет ответ хозяину.<br>3. Хозяин принимает ответ и начинает матч.</p>
 <small>Коды действуют 30 минут. Передавай их только другу: они содержат данные сетевого соединения. При прямой связи соперник может узнать твой IP.</small>
 <p id="peer-status" role="status">Выбери действие. Оставляй игру открытой во время обмена кодами.</p>
@@ -298,7 +298,7 @@ body.match #playing button { flex: 0 1 42px; min-width: 28px; }
 <section id="queue-status" hidden role="status"><b>Поиск соперника…</b><p>Чем дольше поиск, тем шире диапазон рейтинга.</p><button id="cancel-search">Отменить поиск</button></section>
 <details id="shop"><summary>Оформление отражателя</summary><p>Только внешний вид. Скорость, размер и сила удара одинаковые.</p><div id="shop-items"></div><p id="purchase-confirm" hidden><span id="purchase-text"></span><button id="purchase-yes">Купить</button><button id="purchase-no">Отмена</button></p></details>
 <div id="playing" hidden><button id="hit"><span id="hit-label">✦ Удар готов</span><span id="hit-meter"></span></button><button id="pause">Пауза</button><button id="leave">Выйти</button></div>
-<div id="ability" hidden><button id="magnet">Магнит</button><progress id="energy" max="100" value="50" aria-label="Энергия магнита"></progress><small id="energy-note"></small></div><details id="help"><summary>Как играть · 3 подсказки</summary><p>1. Защищай красные ворота снизу. Забивай в бирюзовые ворота с надписью «ЗАБИВАЙ».</p><p>2. В режиме «Одним пальцем» веди пальцем по площадке под полем. Край отражателя меняет угол отскока.</p><p>3. Отпусти палец прямо перед касанием шара: окно точного удара — 0,17 секунды, перезарядка — 0,8 секунды.</p><p>В волне у каждого 8 прочности. Продержись 150 секунд с наибольшей прочностью или выбей всех ботов. В дуэли — 7 голов либо преимущество после 120 секунд.</p><p>Магнит — только в волнах: начинаешь с 50 энергии, обычное отражение даёт 5, точный удар — 25. При 100 нажми «Магнит»: за 4 секунды поймай шар своим отражателем. Он удержится на 1 секунду и автоматически полетит вверх. Награды на всех сложностях одинаковы.</p><button id="help-done">Понятно</button></details>
+<div id="ability" hidden><button id="magnet">Магнит</button><progress id="energy" max="100" value="50" aria-label="Энергия магнита"></progress><small id="energy-note"></small></div><details id="help"><summary>Как играть · 3 подсказки</summary><p>1. Защищай красные ворота снизу. Забивай в бирюзовые ворота с надписью «ЗАБИВАЙ».</p><p>2. В режиме «Одним пальцем» веди пальцем по площадке под полем. Край отражателя меняет угол отскока.</p><p>3. Отпусти палец прямо перед касанием шара: окно точного удара — 0,17 секунды, перезарядка — 0,8 секунды.</p><p>В волне у каждого 8 прочности. Продержись 150 секунд с наибольшей прочностью или выбей всех ботов. В дуэли — 7 голов либо преимущество после 120 секунд. Второй шар появляется на 30-й секунде, третий — на 60-й.</p><p>Магнит — только в волнах: начинаешь с 50 энергии, обычное отражение даёт 5, точный удар — 25. При 100 нажми «Магнит»: за 4 секунды поймай шар своим отражателем. Он удержится на 1 секунду и автоматически полетит вверх. Награды на всех сложностях одинаковы.</p><button id="help-done">Понятно</button></details>
 <details id="settings"><summary>Управление, звук и вибрация</summary>
 <label class="scheme">Звук <input id="sound-enabled" type="checkbox"></label>
 <label class="scheme">Вибрация при голе и точном ударе <input id="haptics-enabled" type="checkbox"></label>
@@ -467,8 +467,8 @@ function step(g,dt) {
   if(g.winner!==null || g.paused) return;
   g.t+=dt;
   const rules=g.rules;
-  const additions=(rules?.ballsAt || [35,70]).filter(time=>g.t>=time).length;
-  if(g.solo && g.balls.length<1+additions) g.balls.push(serve(rules?.speed));
+  const additions=(g.solo ? (rules?.ballsAt || [35,70]) : [30,60]).filter(time=>g.t>=time).length;
+  if(g.balls.length<1+additions) g.balls.push(serve(rules?.speed));
   g.pads.forEach((p,i)=>{
     const bot=g.solo && i>0;
     if(bot && g.t >= (p.nextThink || 0)) {
@@ -769,7 +769,7 @@ function validState(g){
   return g && g.solo===false && finite(g.t) && g.t>=0 && g.t<86400 && typeof g.paused==='boolean' &&
     Array.isArray(g.score)&&g.score.length===2&&g.score.every(n=>Number.isInteger(n)&&n>=0&&n<=100) &&
     Array.isArray(g.hp)&&g.hp.length===4 && Array.isArray(g.pads)&&g.pads.length===2&&g.pads.every(p=>p && finite(p.x)&&p.x>=0&&p.x<=1000&&finite(p.hit)&&Number.isInteger(p.perfect)&&p.perfect>=0) &&
-    Array.isArray(g.balls)&&g.balls.length===1&&g.balls.every(b=>b && ['x','y','vx','vy'].every(k=>finite(b[k])&&Math.abs(b[k])<=2000)) &&
+    Array.isArray(g.balls)&&g.balls.length>=1&&g.balls.length<=3&&g.balls.every(b=>b && ['x','y','vx','vy'].every(k=>finite(b[k])&&Math.abs(b[k])<=2000)) &&
     (g.winner===null || g.winner===0 || g.winner===1) && Number.isInteger(g.goalCount) &&
     (!g.lastGoal || ([0,1].includes(g.lastGoal.side)&&finite(g.lastGoal.t))) && !g.rules;
 }

@@ -42,7 +42,7 @@ function validState(g){
   return g && g.solo===false && finite(g.t) && g.t>=0 && g.t<86400 && typeof g.paused==='boolean' &&
     Array.isArray(g.score)&&g.score.length===2&&g.score.every(n=>Number.isInteger(n)&&n>=0&&n<=100) &&
     Array.isArray(g.hp)&&g.hp.length===4 && Array.isArray(g.pads)&&g.pads.length===2&&g.pads.every(p=>p && finite(p.x)&&p.x>=0&&p.x<=1000&&finite(p.hit)&&Number.isInteger(p.perfect)&&p.perfect>=0) &&
-    Array.isArray(g.balls)&&g.balls.length===1&&g.balls.every(b=>b && ['x','y','vx','vy'].every(k=>finite(b[k])&&Math.abs(b[k])<=2000)) &&
+    Array.isArray(g.balls)&&g.balls.length>=1&&g.balls.length<=3&&g.balls.every(b=>b && ['x','y','vx','vy'].every(k=>finite(b[k])&&Math.abs(b[k])<=2000)) &&
     (g.winner===null || g.winner===0 || g.winner===1) && Number.isInteger(g.goalCount) &&
     (!g.lastGoal || ([0,1].includes(g.lastGoal.side)&&finite(g.lastGoal.t))) && !g.rules;
 }

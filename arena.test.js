@@ -187,3 +187,17 @@ test('signed VK sessions, two devices, room, reconnection and saved reward',{tim
   do{resumed=(await a.wait('state')).game;}while(resumed.paused);
   assert.ok(resumed.t>=paused.t);
 });
+
+test('duel multiball uses match time at 30 and 60 seconds, persists after goals and caps at three',()=>{
+  const g=arena(false);
+  for(const [time,count] of [[30,2],[60,3]]){
+    g.t=time-.02;step(g,.01);assert.equal(g.balls.length,count-1);
+    g.paused=true;step(g,5);assert.equal(g.balls.length,count-1);
+    g.paused=false;step(g,.02);assert.equal(g.balls.length,count);
+    step(g,.01);assert.equal(g.balls.length,count,'No duplicate spawn');
+  }
+  Object.assign(g.balls[0],{x:330,y:985,vx:0,vy:360});
+  step(g,1/60);assert.equal(g.score[1],1);assert.equal(g.balls.length,3);
+  g.t=119;g.score=[0,0];step(g,.01);assert.equal(g.balls.length,3);
+  g.winner=0;const time=g.t;step(g,1);assert.equal(g.t,time);
+});
