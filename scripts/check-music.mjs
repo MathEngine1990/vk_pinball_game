@@ -62,6 +62,12 @@ try{
       await delay(14000);assert.ok(await a.evaluate('musicController.inspect().sources<=6 && !musicController.inspect().failed'));
       for(const [count,want] of [[1,[1,0,0]],[2,[1,1,0]],[3,[1,1,1]],[1,[1,0,0]]]){
         await a.evaluate(`game.solo=true;game.hp[0]=1;game.balls=Array.from({length:${count}},()=>({x:500,y:500,vx:0,vy:0}));musicController.tick()`);
+        if(count===3){
+          assert.ok(await a.evaluate('musicController.inspect().gains[2]<.1'),'Third instrument starts near silence');
+          await delay(1800);
+          assert.ok(await a.evaluate('musicController.inspect().gains[2]>.25 && musicController.inspect().gains[2]<.7'),'Third instrument gradually rises, instead of switching on');
+          assert.ok(await a.evaluate('musicController.inspect().gains.slice(0,2).every(v=>Math.abs(v-1)<.01)'),'Drums and bass stay at their normal volume');
+        }
         await a.until(`musicController.inspect().gains.every((v,i)=>Math.abs(v-${JSON.stringify(want)}[i])<.01)`);
         assert.equal(await a.evaluate('musicController.inspect().track'),'track-01','Instrument changes keep the same synchronized track');
       }

@@ -10,13 +10,13 @@ export function stemLevels(roles,stage){
 }
 export function createMusicController({getContext,getState,baseURL,onStatus=()=>{},fetcher=fetch}){
   let unlocked=false,manifest,manifestWork,scene='',epoch=0,aborter,master,ctx,menu,menuNode;
-  let trackIndex=-1,track,chunk=0,nextTime=0,busy=false,layers=[],nodes=new Set(),pending=null,lastMatch=null;
+  let trackIndex=-1,track,chunk=0,nextTime=0,busy=false,layers=[],layerTargets=[],nodes=new Set(),pending=null,lastMatch=null;
   let volume=-1,level=-1,sceneLoaded=false,failedScene='',autoplayBlocked=false;
   const url=p=>new URL(p,baseURL).href;
   function stop(){
     epoch++;aborter?.abort();aborter=new AbortController();busy=false;pending=null;sceneLoaded=false;autoplayBlocked=false;
     for(const source of nodes){try{source.stop();}catch{}source.disconnect();}nodes.clear();
-    for(const gain of layers)gain.disconnect();layers=[];
+    for(const gain of layers)gain.disconnect();layers=[];layerTargets=[];
     menu?.pause();if(menu){menu.removeAttribute('src');menu.load();}menuNode?.disconnect();menu=menuNode=null;
   }
   async function catalog(){
@@ -85,7 +85,20 @@ export function createMusicController({getContext,getState,baseURL,onStatus=()=>
     if(nextVolume!==volume){volume=nextVolume;master.gain.setTargetAtTime(volume,ctx.currentTime,.25);}
     if(scene==='match' && track){
       const intensity=musicIntensity(s.game);
-      if(intensity!==level || !sceneLoaded){level=intensity;stemLevels(track.roles,level).forEach((v,i)=>layers[i].gain.setTargetAtTime(v,ctx.currentTime,.12));}
+      level=intensity;
+      stemLevels(track.roles,level).forEach((v,i)=>{
+        const key=String(Boolean(s.game?.solo))+':'+v;
+        if(layerTargets[i]===key)return;
+        layerTargets[i]=key;
+        const gain=layers[i].gain,now=ctx.currentTime,current=gain.value;
+        // Preserve the current volume when a fade is interrupted, and do not
+        // restart a scheduled ramp on each tick or chunk boundary.
+        if(gain.cancelAndHoldAtTime)gain.cancelAndHoldAtTime(now);
+        else{gain.cancelScheduledValues(now);gain.setValueAtTime(current,now);}
+        const melody=!['drums','bass'].includes(track.roles[i]);
+        const seconds=s.game?.solo && melody && v===1?4:.15;
+        gain.linearRampToValueAtTime(v,now+seconds);
+      });
       void schedule();
     }
   }
