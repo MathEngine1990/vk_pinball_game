@@ -52,7 +52,7 @@ try{
   await a.call('Runtime.evaluate',{expression:"window.audioStarts=[];const originalStart=AudioBufferSourceNode.prototype.start;AudioBufferSourceNode.prototype.start=function(...args){audioStarts.push({when:args[0],duration:args[2],buffer:this.buffer.duration,rate:this.playbackRate.value});return originalStart.apply(this,args);};musicController.unlock()",userGesture:true});
   await a.until("musicController.inspect().scene==='menu' && musicController.inspect().loaded",20000);
   for(let n=0;n<3;n++){
-    await a.evaluate('game=arena(false);game.paused=true;controls(true);musicController.tick()');
+    await a.evaluate(`game=arena(${n===1});game.paused=true;controls(true);musicController.tick()`);
     await a.until("musicController.inspect().scene==='match' && musicController.inspect().loaded",20000);
     assert.equal(await a.evaluate('musicController.inspect().track'),'track-0'+(n+1));
     await a.until('musicController.inspect().gains.length===3 && musicController.inspect().gains.every(v=>Math.abs(v-1)<.01)');
@@ -60,16 +60,9 @@ try{
     assert.equal(await a.evaluate('musicController.inspect().level'),1);
     if(n===0){
       await delay(14000);assert.ok(await a.evaluate('musicController.inspect().sources<=6 && !musicController.inspect().failed'));
-      for(const [count,want] of [[1,[1,0,0]],[2,[1,1,0]],[3,[1,1,1]],[1,[1,0,0]]]){
+      for(const count of [1,2,3,1]){
         await a.evaluate(`game.solo=true;game.hp[0]=1;game.balls=Array.from({length:${count}},()=>({x:500,y:500,vx:0,vy:0}));musicController.tick()`);
-        if(count===3){
-          assert.ok(await a.evaluate('musicController.inspect().gains[2]<.1'),'Third instrument starts near silence');
-          await delay(1800);
-          assert.ok(await a.evaluate('musicController.inspect().gains[2]>.1 && musicController.inspect().gains[2]<.4'),'Third instrument gradually rises, instead of switching on');
-          assert.ok(await a.evaluate('musicController.inspect().gains.slice(0,2).every(v=>Math.abs(v-1)<.01)'),'Drums and bass stay at their normal volume');
-        }
-        await a.until(`musicController.inspect().gains.every((v,i)=>Math.abs(v-${JSON.stringify(want)}[i])<.01)`);
-        assert.equal(await a.evaluate('musicController.inspect().track'),'track-01','Instrument changes keep the same synchronized track');
+        assert.deepEqual(await a.evaluate('musicController.inspect().gains'),[1,1,1],'All instruments remain audible regardless of ball count');
       }
       await a.evaluate('game.solo=false;musicController.tick()');
       await a.until('musicController.inspect().gains.every(v=>Math.abs(v-1)<.01)');
@@ -101,5 +94,5 @@ try{
   assert.equal(await a.evaluate('musicSettings.enabled'),false);
   assert.deepEqual(await a.evaluate('[musicSettings.volume,audioMix.effects]'),[.4,.3],'Balance survives reload');
   assert.deepEqual(a.errors,[]);
-  console.log('Music: real AAC decode, menu, three track rotations, synchronized stems, chunk boundary, ball-count layers, full duel mix, mute, six WAV effects, heat pitch and persistence OK');
+  console.log('Music: real AAC decode, menu, three track rotations, synchronized stems, chunk boundary, full mix from match start in both modes, mute, six WAV effects, heat pitch and persistence OK');
 }finally{for(const s of sessions)s.ws.close();server.close();browser.kill();}

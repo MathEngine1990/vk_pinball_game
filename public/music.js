@@ -1,22 +1,16 @@
 // One AudioContext clock for every stem; only two short chunks are retained.
-// A stage selects instruments, never their playing volume.
-export function musicIntensity(game){
-  if(!game)return 0;
-  if(!game.solo)return 1;
-  return Math.max(0,Math.min(1,(game.balls.length-1)/2));
-}
-export function stemLevels(roles,stage){
-  return roles.map(role=>role==='drums'?1:role==='bass'?(stage>=.5?1:0):(stage>=1?1:0));
-}
+// Every available instrument plays throughout a match.
+export function musicIntensity(game){return game?1:0;}
+export function stemLevels(roles){return roles.map(()=>1);}
 export function createMusicController({getContext,getState,baseURL,onStatus=()=>{},fetcher=fetch}){
   let unlocked=false,manifest,manifestWork,scene='',epoch=0,aborter,master,ctx,menu,menuNode;
-  let trackIndex=-1,track,chunk=0,nextTime=0,busy=false,layers=[],layerTargets=[],nodes=new Set(),pending=null,lastMatch=null;
+  let trackIndex=-1,track,chunk=0,nextTime=0,busy=false,layers=[],nodes=new Set(),pending=null,lastMatch=null;
   let volume=-1,level=-1,sceneLoaded=false,failedScene='',autoplayBlocked=false;
   const url=p=>new URL(p,baseURL).href;
   function stop(){
     epoch++;aborter?.abort();aborter=new AbortController();busy=false;pending=null;sceneLoaded=false;autoplayBlocked=false;
     for(const source of nodes){try{source.stop();}catch{}source.disconnect();}nodes.clear();
-    for(const gain of layers)gain.disconnect();layers=[];layerTargets=[];
+    for(const gain of layers)gain.disconnect();layers=[];
     menu?.pause();if(menu){menu.removeAttribute('src');menu.load();}menuNode?.disconnect();menu=menuNode=null;
   }
   async function catalog(){
@@ -68,7 +62,7 @@ export function createMusicController({getContext,getState,baseURL,onStatus=()=>
       }else{
         if(!m.tracks.length)throw Error('no tracks');
         track=m.tracks[(trackIndex+m.tracks.length)%m.tracks.length];
-        layers=track.roles.map(()=>{const g=ctx.createGain();g.gain.value=0;g.connect(master);return g;});
+        layers=track.roles.map(()=>{const g=ctx.createGain();g.gain.value=1;g.connect(master);return g;});
         chunk=0;nextTime=0;await schedule();
       }
     }catch(e){if(token===epoch && e.name==='NotAllowedError'){autoplayBlocked=true;return;}if(token===epoch && e.name!=='AbortError'){failedScene=next;onStatus('Музыка недоступна. Выключи и включи её для повтора.');}}
@@ -84,27 +78,7 @@ export function createMusicController({getContext,getState,baseURL,onStatus=()=>
     const nextVolume=Math.max(0,Math.min(1,s.volume))*.35;
     if(nextVolume!==volume){volume=nextVolume;master.gain.setTargetAtTime(volume,ctx.currentTime,.25);}
     if(scene==='match' && track){
-      const intensity=musicIntensity(s.game);
-      level=intensity;
-      stemLevels(track.roles,level).forEach((v,i)=>{
-        const key=String(Boolean(s.game?.solo))+':'+v;
-        if(layerTargets[i]===key)return;
-        layerTargets[i]=key;
-        const gain=layers[i].gain,now=ctx.currentTime,current=gain.value;
-        // Always anchor at NOW, including when the preceding automation ended
-        // long ago. A ramp must never interpolate from the old silent endpoint.
-        gain.cancelScheduledValues(now);
-        gain.setValueAtTime(current,now);
-        const melody=!['drums','bass'].includes(track.roles[i]);
-        if(s.game?.solo && melody && v===1){
-          // A gentle start makes the fade audible even with a loud guitar stem.
-          // Explicit short ramps also work without cancelAndHoldAtTime in WebViews.
-          for(let n=1;n<=32;n++){
-            const progress=n/32;
-            gain.linearRampToValueAtTime(current+(v-current)*progress*progress,now+4*progress);
-          }
-        }else gain.linearRampToValueAtTime(v,now+.15);
-      });
+      level=musicIntensity(s.game);
       void schedule();
     }
   }
