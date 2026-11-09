@@ -5,3 +5,9 @@ node_modules/
 !.env.example
 outputs/
 backups/
+
+# Local development notes; do not publish
+/Баланс одиночной игры.txt
+/Варианты развития.txt
+/Монетизация — статус и следующие шаги.txt
+/Решения по дуэли.txt
