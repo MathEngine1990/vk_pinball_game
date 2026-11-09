@@ -1,12 +1,12 @@
 // One AudioContext clock for every stem; only two short chunks are retained.
+// A stage selects instruments, never their playing volume.
 export function musicIntensity(game){
   if(!game)return 0;
-  if(!game.solo)return Math.max(0,Math.min(1,((game.balls[0]?.minSpeed||360)-360)/720));
-  return Math.max(0,Math.min(1,Math.max((game.balls.length-1)/2,(4-game.hp[0])/3)));
+  if(!game.solo)return 1;
+  return Math.max(0,Math.min(1,(game.balls.length-1)/2));
 }
-export function stemLevels(roles,intensity){
-  const levels={drums:.55+.35*intensity,bass:.75,other:.3+.6*intensity};
-  return roles.map(role=>levels[role]??(.3+.5*intensity));
+export function stemLevels(roles,stage){
+  return roles.map(role=>role==='drums'?1:role==='bass'?(stage>=.5?1:0):(stage>=1?1:0));
 }
 export function createMusicController({getContext,getState,baseURL,onStatus=()=>{},fetcher=fetch}){
   let unlocked=false,manifest,manifestWork,scene='',epoch=0,aborter,master,ctx,menu,menuNode;
@@ -81,11 +81,11 @@ export function createMusicController({getContext,getState,baseURL,onStatus=()=>
     const desired=s.enabled&&!s.hidden?(match?'match':'menu'):'';
     if(desired!==scene)void enter(desired);
     if(!desired)return;
-    const nextVolume=Math.max(0,Math.min(1,s.volume))*.35*(s.game?.paused ? .18:1);
+    const nextVolume=Math.max(0,Math.min(1,s.volume))*.35;
     if(nextVolume!==volume){volume=nextVolume;master.gain.setTargetAtTime(volume,ctx.currentTime,.25);}
     if(scene==='match' && track){
       const intensity=musicIntensity(s.game);
-      if(intensity!==level || !sceneLoaded){level=intensity;stemLevels(track.roles,level).forEach((v,i)=>layers[i].gain.setTargetAtTime(v,ctx.currentTime,1));}
+      if(intensity!==level || !sceneLoaded){level=intensity;stemLevels(track.roles,level).forEach((v,i)=>layers[i].gain.setTargetAtTime(v,ctx.currentTime,.12));}
       void schedule();
     }
   }
@@ -102,5 +102,5 @@ export function createMusicController({getContext,getState,baseURL,onStatus=()=>
   }
   const timer=setInterval(tick,200);
   return {unlock,tick,stop:()=>{stop();scene='';},dispose:()=>{clearInterval(timer);stop();master?.disconnect();},
-    inspect:()=>({scene,track:track?.id,level,loaded:sceneLoaded,sources:nodes.size,failed:failedScene})};
+    inspect:()=>({scene,track:track?.id,level,gains:layers.map(layer=>layer.gain.value),loaded:sceneLoaded,sources:nodes.size,failed:failedScene})};
 }

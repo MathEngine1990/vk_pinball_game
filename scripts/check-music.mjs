@@ -55,9 +55,19 @@ try{
     await a.evaluate('game=arena(false);game.paused=true;controls(true);musicController.tick()');
     await a.until("musicController.inspect().scene==='match' && musicController.inspect().loaded",20000);
     assert.equal(await a.evaluate('musicController.inspect().track'),'track-0'+(n+1));
+    await a.until('musicController.inspect().gains.length===3 && musicController.inspect().gains.every(v=>Math.abs(v-1)<.01)');
     await a.evaluate('game.balls[0].minSpeed=1080;musicController.tick()');
     assert.equal(await a.evaluate('musicController.inspect().level'),1);
-    if(n===0){await delay(14000);assert.ok(await a.evaluate('musicController.inspect().sources<=6 && !musicController.inspect().failed'));}
+    if(n===0){
+      await delay(14000);assert.ok(await a.evaluate('musicController.inspect().sources<=6 && !musicController.inspect().failed'));
+      for(const [count,want] of [[1,[1,0,0]],[2,[1,1,0]],[3,[1,1,1]],[1,[1,0,0]]]){
+        await a.evaluate(`game.solo=true;game.hp[0]=1;game.balls=Array.from({length:${count}},()=>({x:500,y:500,vx:0,vy:0}));musicController.tick()`);
+        await a.until(`musicController.inspect().gains.every((v,i)=>Math.abs(v-${JSON.stringify(want)}[i])<.01)`);
+        assert.equal(await a.evaluate('musicController.inspect().track'),'track-01','Instrument changes keep the same synchronized track');
+      }
+      await a.evaluate('game.solo=false;musicController.tick()');
+      await a.until('musicController.inspect().gains.every(v=>Math.abs(v-1)<.01)');
+    }
     await a.evaluate('game=null;controls(false);musicController.tick()');
     await a.until("musicController.inspect().scene==='menu' && musicController.inspect().loaded");
   }
@@ -85,5 +95,5 @@ try{
   assert.equal(await a.evaluate('musicSettings.enabled'),false);
   assert.deepEqual(await a.evaluate('[musicSettings.volume,audioMix.effects]'),[.4,.3],'Balance survives reload');
   assert.deepEqual(a.errors,[]);
-  console.log('Music: real AAC decode, menu, three track rotations, synchronized stems, chunk boundary, heat, mute, six WAV effects, heat pitch and persistence OK');
+  console.log('Music: real AAC decode, menu, three track rotations, synchronized stems, chunk boundary, ball-count layers, full duel mix, mute, six WAV effects, heat pitch and persistence OK');
 }finally{for(const s of sessions)s.ws.close();server.close();browser.kill();}
