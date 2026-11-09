@@ -91,13 +91,19 @@ export function createMusicController({getContext,getState,baseURL,onStatus=()=>
         if(layerTargets[i]===key)return;
         layerTargets[i]=key;
         const gain=layers[i].gain,now=ctx.currentTime,current=gain.value;
-        // Preserve the current volume when a fade is interrupted, and do not
-        // restart a scheduled ramp on each tick or chunk boundary.
-        if(gain.cancelAndHoldAtTime)gain.cancelAndHoldAtTime(now);
-        else{gain.cancelScheduledValues(now);gain.setValueAtTime(current,now);}
+        // Always anchor at NOW, including when the preceding automation ended
+        // long ago. A ramp must never interpolate from the old silent endpoint.
+        gain.cancelScheduledValues(now);
+        gain.setValueAtTime(current,now);
         const melody=!['drums','bass'].includes(track.roles[i]);
-        const seconds=s.game?.solo && melody && v===1?4:.15;
-        gain.linearRampToValueAtTime(v,now+seconds);
+        if(s.game?.solo && melody && v===1){
+          // A gentle start makes the fade audible even with a loud guitar stem.
+          // Explicit short ramps also work without cancelAndHoldAtTime in WebViews.
+          for(let n=1;n<=32;n++){
+            const progress=n/32;
+            gain.linearRampToValueAtTime(current+(v-current)*progress*progress,now+4*progress);
+          }
+        }else gain.linearRampToValueAtTime(v,now+.15);
       });
       void schedule();
     }

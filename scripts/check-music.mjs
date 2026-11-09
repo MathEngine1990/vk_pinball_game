@@ -65,7 +65,7 @@ try{
         if(count===3){
           assert.ok(await a.evaluate('musicController.inspect().gains[2]<.1'),'Third instrument starts near silence');
           await delay(1800);
-          assert.ok(await a.evaluate('musicController.inspect().gains[2]>.25 && musicController.inspect().gains[2]<.7'),'Third instrument gradually rises, instead of switching on');
+          assert.ok(await a.evaluate('musicController.inspect().gains[2]>.1 && musicController.inspect().gains[2]<.4'),'Third instrument gradually rises, instead of switching on');
           assert.ok(await a.evaluate('musicController.inspect().gains.slice(0,2).every(v=>Math.abs(v-1)<.01)'),'Drums and bass stay at their normal volume');
         }
         await a.until(`musicController.inspect().gains.every((v,i)=>Math.abs(v-${JSON.stringify(want)}[i])<.01)`);

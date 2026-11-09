@@ -34,3 +34,22 @@ test('blocked menu autoplay retries on interaction without a loading error',asyn
   controller.unlock();await new Promise(r=>setTimeout(r,20));assert.equal(attempts,2);assert.equal(controller.inspect().loaded,true);
  }finally{controller.dispose();globalThis.Audio=original;}
 });
+
+
+test('melody fade anchors to the current audio time after a long silent period',async()=>{
+ const gains=[];
+ const ctx={state:'running',currentTime:0,destination:{},
+  createGain(){const events=[];const node={gain:{value:0,cancelScheduledValues:t=>events.push(['cancel',t]),setValueAtTime:(v,t)=>events.push(['set',v,t]),linearRampToValueAtTime:(v,t)=>events.push(['ramp',v,t]),setTargetAtTime(){}},events,connect(){},disconnect(){}};gains.push(node);return node;},
+  createBufferSource:()=>({connect(){},disconnect(){},start(){},stop(){}}),
+  decodeAudioData:async()=>({duration:12})};
+ const state={enabled:true,volume:.25,hidden:false,game:{solo:true,balls:[{}]}};
+ const controller=createMusicController({getContext:()=>ctx,getState:()=>state,baseURL:'https://example.test/',fetcher:async()=>({ok:true,json:async()=>({chunkSeconds:12,tracks:[{id:'test',duration:120,chunks:10,roles:['drums','bass','other']}]}),arrayBuffer:async()=>new ArrayBuffer(0)})});
+ try{
+  controller.unlock();await new Promise(r=>setTimeout(r,10));controller.tick();
+  const melody=gains[3];melody.events.length=0;ctx.currentTime=60;state.game.balls=[{},{},{}];controller.tick();
+  assert.deepEqual(melody.events.slice(0,2),[['cancel',60],['set',0,60]]);
+  assert.deepEqual(melody.events.find(e=>e[0]==='ramp' && e[2]===61),['ramp',.0625,61]);
+  assert.deepEqual(melody.events.at(-1),['ramp',1,64]);
+  const count=melody.events.length;ctx.currentTime=61;controller.tick();assert.equal(melody.events.length,count,'Regular ticks must not restart the fade');
+ }finally{controller.dispose();}
+});
